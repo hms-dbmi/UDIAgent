@@ -48,5 +48,15 @@ class ChatCompletionRequest(BaseModel):
 @app.post("/v1/chat/completions")
 def chat_completions(request: ChatCompletionRequest):
     response = agent.chat_completions(messages=request.messages)
-    return {"messages": request.messages, "response": response} 
+    return { "response": response } 
 
+
+class CompletionRequest(BaseModel):
+    model: str
+    messages: list[dict]
+    tools: list[dict]
+
+@app.post("/v1/completions")
+def completions(request: CompletionRequest):
+    response = agent.completions(messages=request.messages, tools=request.tools)
+    return { "response": response } 

@@ -1,4 +1,6 @@
 from openai import OpenAI
+from jinja2 import Template
+from transformers import AutoTokenizer
 
 class UDIAgent:
     """UDIAgent for requesting UDI grammar given a prompt."""
@@ -22,12 +24,32 @@ class UDIAgent:
         )
 
     def chat_completions(self, messages: list[dict]):
-        """Request chat completions from the model."""
         response = self.model.chat.completions.create(
             model=self.model_name,
             messages=messages,
             # max_tokens=40960,
             max_tokens=120_000,
+            # temperature=0.7,
+            # top_p=1.0,
+        )
+        return response
+
+
+    def completions(self, messages: list[dict], tools: list[dict]):
+        tokenizer = AutoTokenizer.from_pretrained(self.model_name)
+        chat_template = Template(tokenizer.chat_template)
+
+
+        prompt = chat_template.render(
+            messages=messages, tools=tools, add_generation_prompt=True)
+
+
+        print(f"Prompt: {prompt}")
+
+        response = self.model.completions.create(
+            model=self.model_name,
+            prompt=prompt,
+            max_tokens=110_000,
             # temperature=0.7,
             # top_p=1.0,
         )
