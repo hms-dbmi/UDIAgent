@@ -39,6 +39,12 @@ class UDIAgent:
         tokenizer = AutoTokenizer.from_pretrained(self.model_name)
         chat_template = Template(tokenizer.chat_template)
 
+        print(f"Messages: {messages}")
+
+        # Debuggint, remove all the tool_calls from the messages
+        for message in messages:
+            if 'tool_calls' in message:
+                del message['tool_calls']
 
         prompt = chat_template.render(
             messages=messages, tools=tools, add_generation_prompt=True)
@@ -49,7 +55,7 @@ class UDIAgent:
         response = self.model.completions.create(
             model=self.model_name,
             prompt=prompt,
-            max_tokens=110_000,
+            max_tokens=16_384,
             # temperature=0.7,
             # top_p=1.0,
         )
