@@ -1,5 +1,5 @@
 
-salloc -p kempner_requeue --account=kempner_mzitnik_lab -N 1 -c 24 --mem=200G --gres=gpu:1 -t 0-03:00 -C h100
+salloc -p kempner_h100 --account=kempner_mzitnik_lab -N 1 -c 24 --mem=200G --gres=gpu:1 -t 0-23:00 -C h100
 module load ncf/1.0.0-fasrc01
 module load miniconda3/py39_4.11.0-linux_x64-ncf
 conda activate udienv
