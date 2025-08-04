@@ -23,7 +23,8 @@ app.add_middleware(
 
 # init agent
 agent = UDIAgent(
-    model_name="agenticx/UDI-VIS-Beta-v0-Llama-3.1-8B",
+    # model_name="agenticx/UDI-VIS-Beta-v0-Llama-3.1-8B",
+    model_name="/n/netscratch/mzitnik_lab/Lab/dlange/data/vis-v2/data/agenticx/UDI-VIS-Beta-v2-Llama-3.1-8B_merged",
     vllm_server_url="http://localhost",
     vllm_server_port=8080
 )
@@ -80,18 +81,25 @@ def udi_completions(request: UDICompletionRequest):
 
     output = raw_result.get('response').choices[0].text
     # should containt the text "[TOOL_CALLS][...]"
-    if "[TOOL_CALLS]" not in output:
-        raise ValueError("Output does not contain tool calls")
+    # if "[TOOL_CALLS]" not in output:
+    #     raise ValueError(f"Output does not contain tool calls: {output}")
 
     # remove the "[TOOL_CALLS]" part
-    tool_calls_str = output.split("[TOOL_CALLS]")[1].strip()
+    # tool_calls_str = output.split("[TOOL_CALLS]")[1].strip()
+    tool_calls_str = output.strip()
+    if tool_calls_str.startswith("<|python_tag|>"):
+        tool_calls_str = output.split("<|python_tag|>")[1].strip()
     # parse the tool calls
     try:
         tool_calls = json.loads(tool_calls_str)
     except json.JSONDecodeError as e:
+        print(json)
         raise ValueError(f"Failed to parse tool calls: {e}")
     
     # find the tool call with name "RenderVisualization"
+    if not isinstance(tool_calls, list):
+        tool_calls = [tool_calls]
+        
     for tool_call in tool_calls:
         if tool_call.get("name") == "RenderVisualization":
             # return the arguments of the tool call
