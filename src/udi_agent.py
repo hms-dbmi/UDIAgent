@@ -29,7 +29,7 @@ class UDIAgent:
             messages=messages,
             # max_tokens=40960,
             max_tokens=120_000,
-            # temperature=0.7,
+            temperature=0.0,
             # top_p=1.0,
         )
         return response
@@ -41,7 +41,8 @@ class UDIAgent:
 
         print(f"Messages: {messages}")
 
-        # Debuggint, remove all the tool_calls from the messages
+        # Debugging, remove all the tool_calls from the messages
+        # TODO: try reformatting as strings.
         for message in messages:
             if 'tool_calls' in message:
                 del message['tool_calls']
@@ -56,7 +57,7 @@ class UDIAgent:
             model=self.model_name,
             prompt=prompt,
             max_tokens=16_384,
-            # temperature=0.7,
+            temperature=0.0,
             # top_p=1.0,
         )
         return response
