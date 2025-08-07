@@ -24,6 +24,10 @@ in compute node:
 - start server:
 
 tmux new -s api
+/n/home05/dlange/UDIAgent
+module load ncf/1.0.0-fasrc01
+module load miniconda3/py39_4.11.0-linux_x64-ncf
+conda activate udienv
 
 e.g. python3 -m http.server 8000 --bind 127.0.0.1x
 or fastapi dev ./src/udi_api.py
