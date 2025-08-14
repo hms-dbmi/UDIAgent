@@ -29,6 +29,17 @@ agent = UDIAgent(
     vllm_server_port=8080
 )
 
+# @app.get("/test1")
+# def basic_test():
+#     prompt = "Generate a UDI grammar for a bar chart showing sales data."
+#     response = agent.basic_test(prompt)
+#     return {"response": response}
+
+
+# @app.get("/testfancycompletions")
+# def basic_test():
+#     response = agent.test_completions_with_more_params()
+#     return { "response": response }
 
 @app.get("/")
 def read_root():
@@ -62,6 +73,161 @@ def completions(request: CompletionRequest):
     response = agent.completions(messages=request.messages, tools=request.tools)
     return { "response": response }
 
+class YACCompletionRequest(BaseModel):
+    model: str
+    messages: list[dict]
+    dataSchema: str
+
+
+@app.post("/v1/yac/completions")
+def yac_completions(request: YACCompletionRequest):
+    calls_to_make = determine_function_calls(request)
+    print('calls_to_make:', calls_to_make)
+    tool_calls = []
+    if calls_to_make == "both" or calls_to_make == "get-subset-of-data":
+        tool_calls.append(function_call_filter(request))
+    if calls_to_make == "both" or calls_to_make == "render-visualization":
+        tool_calls.append(function_call_render_visualization(request))
+    print('tool_calls:', tool_calls)
+    return tool_calls
+
+
+def determine_function_calls(request: YACCompletionRequest):
+    choices = [ 'render-visualization', 'get-subset-of-data', 'both']
+    # add some prompt engineering into the messages.
+    messages = list(request.messages)  # make a copy to avoid mutating the original
+    messages.append({
+        "role": "system",
+        "content": "The user wants to investigate data. Based on the question determine if it can be answered with a visualization (respond 'render-visualization'), or if the question requires the data to be first filtered, then can be visualized ('both'). Finally, if the user just asks for the data to be updated respond with 'get-subset-of-data'."})
+    response = agent.completions_guided_choice(
+        messages=messages,
+        tools = [
+            {
+                "type": "function",
+                "function": {
+                    "name": "determine_function_call",
+                    "description": "Decompose the user request into multiple function calls. The choice is determined if the user's request requires filtering data, visualizing data, or both.",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "choice": {
+                                "type": "string",
+                                "enum": choices,
+                                "description": "The plan for answering the users's query."
+                            }
+                        },
+                        "required": ["choice"]
+                    }
+                }
+            }
+        ],
+        choices=choices)
+    return response.choices[0].text
+
+
+def function_call_filter(request: YACCompletionRequest):
+    response = agent.completions_guided_json(
+        messages=request.messages,
+        tools = [
+            {
+                "type": "function",
+                "function": {
+                    "name": "FilterData",
+                    "description": "Filter the data. Use a quantitative range filter on a field from the dataset.",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "min": {
+                                "type": "number",
+                                "description": "The minimum for the filter.",
+                            },
+                            "max": {
+                                "type": "number",
+                                "description": "The maximum for the filter.",
+                            },
+                            "entity": {
+                                "type": "string",
+                                "description": "The entity to filter based on the current dataset schema.",
+                            },
+                            "field": {
+                                "type": "string",
+                                "description": "The field to filter. Must be a quantitative field from the selected entity.",
+                            }
+                        },
+                        "required": ["entity", "field"],
+                        "anyOf": [
+                            {"required": ["min"]},
+                            {"required": ["max"]}
+                        ]
+                    },
+                },
+            }
+        ],
+        json_schema=json.dumps(
+            {
+                "type": "object",
+                "properties": {
+                    "min": {
+                        "type": "number",
+                        "description": "The minimum for the filter."
+                    },
+                    "max": {
+                        "type": "number",
+                        "description": "The maximum for the filter."
+                    },
+                    "entity": {
+                        "type": "string",
+                        "description": "The entity to filter based on the current dataset schema."
+                    },
+                    "field": {
+                        "type": "string",
+                        "description": "The field to filter. Must be a quantitative field from the selected entity."
+                    }
+                },
+                "required": ["entity", "field"],
+                "anyOf": [
+                    {"required": ["min"]},
+                    {"required": ["max"]}
+                ]
+            }
+        ))
+    filterArgs = response.choices[0].text
+    return {"name": "FilterData", "arguments": filterArgs}
+
+def function_call_render_visualization(request: YACCompletionRequest):
+    f = open('./src/UDIGrammarSchema.json', 'r')
+    udi_grammar_dict = json.load(f)
+    f.close()
+    f = open('./src/UDIGrammarSchema_spec_string.json', 'r')
+    udi_grammar_string = f.read()
+    f.close()
+    messages = list(request.messages)  # make a copy to avoid mutating the original
+    firstMessage = {
+        "role": "system",
+        "content": f"You are a helpful assistant that will explore, and analyze datasets with visualizations. The following defines the available datasets:\n{request.dataSchema}\nTypically, your actions will use the provided functions. You have access to the following functions."
+    }
+    messages.insert(0, firstMessage)
+    response = agent.completions_guided_json(
+        messages=messages,
+        tools = [
+            {
+                "type": "function",
+                "function": {
+                    "name": "RenderVisualization",
+                    "description": "Render a visualization with a provided visualization grammar of graphics style specification.",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "spec": udi_grammar_dict,
+                        },
+                        "required": ["spec"],
+                    },
+                },
+            }
+        ],
+        json_schema=udi_grammar_string)
+    return json.loads(response.choices[0].text)
+    # return {"name": "RenderVisualization", "arguments": {"spec": spec}}
 
 class UDICompletionRequest(BaseModel):
     model: str
