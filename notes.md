@@ -1,3 +1,32 @@
+My steps for running inference:
+
+```
+salloc -p kempner_h100 --account=kempner_mzitnik_lab -c 24 --mem=200G --gres=gpu:1 -t 0-23:00 -C h100
+tmux new -s vllm
+module load ncf/1.0.0-fasrc01
+module load miniconda3/py39_4.11.0-linux_x64-ncf
+conda activate udienv
+vllm serve /n/netscratch/mzitnik_lab/Lab/dlange/data/vis-v2/data/agenticx/UDI-VIS-Beta-v2-Llama-3.1-8B_merged --gpu-memory-utilization 0.85 --port 8080 --host 127.0.0.1
+```
+
+detach tmux: control b, d
+```
+tmux new -s api
+cd /n/home05/dlange/UDIAgent
+module load ncf/1.0.0-fasrc01
+module load miniconda3/py39_4.11.0-linux_x64-ncf
+conda activate udienv
+fastapi dev ./src/udi_api.py
+```
+detach tmux: control b, d
+
+get hostname with `hostname`
+
+open login node:
+```
+ssh -L 55001:localhost:8000 hostname
+```
+
 
 salloc -p kempner_h100 --account=kempner_mzitnik_lab -c 24 --mem=200G --gres=gpu:1 -t 0-23:00 -C h100
 salloc -p kempner_requeue --account=kempner_mzitnik_lab -c 24 --mem=200G --gres=gpu:1 -t 0-23:00 -C h100
