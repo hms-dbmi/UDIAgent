@@ -81,6 +81,7 @@ class YACCompletionRequest(BaseModel):
 
 @app.post("/v1/yac/completions")
 def yac_completions(request: YACCompletionRequest):
+    split_tool_calls(request)
     calls_to_make = determine_function_calls(request)
     print('calls_to_make:', calls_to_make)
     tool_calls = []
@@ -90,6 +91,25 @@ def yac_completions(request: YACCompletionRequest):
         tool_calls.append(function_call_render_visualization(request))
     print('tool_calls:', tool_calls)
     return tool_calls
+
+def split_tool_calls(request: YACCompletionRequest):
+    # for each message in the request if there are multiple tool calls, split them into separate messages.
+    # Note: this was needed because jinja template used cannot handle multiple tool calls in a single message.
+    new_messages = []
+    for message in request.messages:
+        if 'tool_calls' in message:
+            tool_calls = message['tool_calls']
+            if isinstance(tool_calls, list) and len(tool_calls) > 1:
+                # split into multiple messages
+                for i, tool_call in enumerate(tool_calls):
+                    new_message = message.copy()
+                    new_message['tool_calls'] = [tool_call]
+                    new_messages.append(new_message)
+        else:
+            new_messages.append(message)
+
+    request.messages = new_messages
+    return
 
 
 def determine_function_calls(request: YACCompletionRequest):
@@ -122,12 +142,23 @@ def determine_function_calls(request: YACCompletionRequest):
             }
         ],
         choices=choices)
+    # return 'render-visualization'  # TODO: testing, remove this later.
+    # return 'both'  # TODO: testing, remove this later.
+    # return 'get-subset-of-data'  # TODO: testing, remove this later.
     return response.choices[0].text
 
 
 def function_call_filter(request: YACCompletionRequest):
+    messages = list(request.messages)  # make a copy to avoid mutating the original
+    interstitialMessage = {
+        "role": "system",
+        "content": f"You are a helpful assistant that will explore, and analyze datasets. The following defines the available datasets:\n{request.dataSchema}\nRight now you need to filter the data based on the users request."
+    }
+    messages.insert(len(messages) - 1, interstitialMessage)
+
+
     response = agent.completions_guided_json(
-        messages=request.messages,
+        messages=messages,
         tools = [
             {
                 "type": "function",
@@ -154,11 +185,7 @@ def function_call_filter(request: YACCompletionRequest):
                                 "description": "The field to filter. Must be a quantitative field from the selected entity.",
                             }
                         },
-                        "required": ["entity", "field"],
-                        "anyOf": [
-                            {"required": ["min"]},
-                            {"required": ["max"]}
-                        ]
+                        "required": ["entity", "field", "min", "max"],
                     },
                 },
             }
