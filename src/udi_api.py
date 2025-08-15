@@ -218,8 +218,9 @@ def function_call_filter(request: YACCompletionRequest):
                 ]
             }
         ))
-    filterArgs = response.choices[0].text
-    return {"name": "FilterData", "arguments": filterArgs}
+    return json.loads(response.choices[0].text)
+    # filterArgs = response.choices[0].text
+    # return {"name": "FilterData", "arguments": filterArgs}
 
 def function_call_render_visualization(request: YACCompletionRequest):
     f = open('./src/UDIGrammarSchema.json', 'r')
