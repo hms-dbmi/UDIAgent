@@ -169,50 +169,48 @@ def function_call_filter(request: YACCompletionRequest):
     messages.insert(len(messages) - 1, interstitialMessage)
 
 
+# This schema is not as constrained as it could be:
+#   ideally only one of intervalRange and pointValues would be populated
+#   the filtertype would match which of them was populated.
+# These are possible with json schema, but was having trouble getting chat gpt to
+# to work well with anyof / oneof thingies.
     response = agent.gpt_completions_guided_json(
         messages=messages,
-        # tools = [
-        #     {
-        #         "type": "function",
-        #         "function": {
-        #             "name": "FilterData",
-        #             "description": "Filter the data. Use a quantitative range filter on a field from the dataset.",
-        #             "parameters": {
-        #                 "type": "object",
-        #                 "properties": {
-        #                     "min": {
-        #                         "type": "number",
-        #                         "description": "The minimum for the filter.",
-        #                     },
-        #                     "max": {
-        #                         "type": "number",
-        #                         "description": "The maximum for the filter.",
-        #                     },
-        #                     "entity": {
-        #                         "type": "string",
-        #                         "description": "The entity to filter based on the current dataset schema.",
-        #                     },
-        #                     "field": {
-        #                         "type": "string",
-        #                         "description": "The field to filter. Must be a quantitative field from the selected entity.",
-        #                     }
-        #                 },
-        #                 "required": ["entity", "field", "min", "max"],
-        #             },
-        #         },
-        #     }
-        # ],
         json_schema = json.dumps(
+            
+            
+            
             {
-                "type": "object",
-                "properties": {
-                    "min": {
-                        "type": "number",
-                        "description": "The minimum for the filter."
+            "type": "object",
+            "properties": {
+                "filter": {
+                    "type": "object",
+                    "properties": {
+                        "filterType": { "enum": ["point", "interval"] },
+                        "intervalRange": {
+                            "type": "object",
+                            "properties": {
+                                "min": {
+                                    "type": "number",
+                                    "description": "The minimum for the filter."
+                                },
+                                "max": {
+                                    "type": "number",
+                                    "description": "The maximum for the filter."
+                                }
+                            },
+                            "required": ["min", "max"],
+                            "additionalProperties": False
+                        },
+                        "pointValues": {
+                            "type": "array",
+                            "items": { "type": "string" },
+                            "minItems": 1,
+                            "description": "The values to filter for categorical fields."
+                        }
                     },
-                    "max": {
-                        "type": "number",
-                        "description": "The maximum for the filter."
+                    "required": ["filterType","intervalRange","pointValues"],
+                    "additionalProperties": False
                     },
                     "entity": {
                         "type": "string",
@@ -223,9 +221,60 @@ def function_call_filter(request: YACCompletionRequest):
                         "description": "The field to filter. Must be a quantitative field from the selected entity."
                     }
                 },
-                "required": ["entity", "field", "min", "max"],
-                "additionalProperties": False,
+                "required": ["entity", "field", "filter"],
+                "additionalProperties": False
             }
+
+        
+
+
+
+            # {
+            #     "type": "object",
+            #     "properties": {
+            #         "filter": {
+            #             "type": "object",
+            #             "properties": {
+            #                 "filterType": {"enum": ["point", "interval"]},
+            #                 "range": {
+            #                     "type": "object",
+            #                     "properties": {
+            #                         "min": {
+            #                             "type": "number",
+            #                             "description": "The minimum for the filter."
+            #                         },
+            #                         "max": {
+            #                             "type": "number",
+            #                             "description": "The maximum for the filter."
+            #                         },
+            #                     }.
+            #                 },
+            #                 "values": {
+            #                     "type": "array",
+            #                     "items": { "type": "string" },
+            #                     "minItems": 1,
+            #                     "uniqueItems": True,
+            #                     "description": "The values to filter for categorical fields."
+            #                 },
+            #                 "required": ["filterType"],
+            #                 "anyOf": [
+            #                     {"required": ["values"]},
+            #                     {"required": ["range"]}
+            #                 ],
+            #             }
+            #         },
+            #         "entity": {
+            #             "type": "string",
+            #             "description": "The entity to filter based on the current dataset schema."
+            #         },
+            #         "field": {
+            #             "type": "string",
+            #             "description": "The field to filter. Must be a quantitative field from the selected entity."
+            #         }
+            #     },
+            #     "required": ["entity", "field", "filter"],
+            #     "additionalProperties": False,
+            # }
         ))
     print(response)
     tool_calls = [{"name": "FilterData", "arguments": args} for args in response]
