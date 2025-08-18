@@ -4,7 +4,7 @@ from pydantic import BaseModel
 from fastapi import FastAPI
 from udi_agent import UDIAgent
 from fastapi.middleware.cors import CORSMiddleware
-
+import copy
 
 
 app = FastAPI()
@@ -25,6 +25,7 @@ app.add_middleware(
 agent = UDIAgent(
     # model_name="agenticx/UDI-VIS-Beta-v0-Llama-3.1-8B",
     model_name="/n/netscratch/mzitnik_lab/Lab/dlange/data/vis-v2/data/agenticx/UDI-VIS-Beta-v2-Llama-3.1-8B_merged",
+    gpt_model_name="gpt-4.1",
     vllm_server_url="http://localhost",
     vllm_server_port=8080
 )
@@ -86,7 +87,7 @@ def yac_completions(request: YACCompletionRequest):
     print('calls_to_make:', calls_to_make)
     tool_calls = []
     if calls_to_make == "both" or calls_to_make == "get-subset-of-data":
-        tool_calls.append(function_call_filter(request))
+        tool_calls.extend(function_call_filter(request))
     if calls_to_make == "both" or calls_to_make == "render-visualization":
         tool_calls.append(function_call_render_visualization(request))
     print('tool_calls:', tool_calls)
@@ -112,10 +113,18 @@ def split_tool_calls(request: YACCompletionRequest):
     return
 
 
+def strip_tool_calls(messages: list[dict]):
+    # remove tool calls from messages
+    for message in messages:
+        if 'tool_calls' in message:
+            del message['tool_calls']
+    return messages
+
 def determine_function_calls(request: YACCompletionRequest):
     choices = [ 'render-visualization', 'get-subset-of-data', 'both']
     # add some prompt engineering into the messages.
-    messages = list(request.messages)  # make a copy to avoid mutating the original
+    messages = copy.deepcopy(request.messages)  # make a copy to avoid mutating the original
+    strip_tool_calls(messages)
     messages.append({
         "role": "system",
         "content": "The user wants to investigate data. Based on the question determine if it can be answered with a visualization (respond 'render-visualization'), or if the question requires the data to be first filtered, then can be visualized ('both'). Finally, if the user just asks for the data to be updated respond with 'get-subset-of-data'."})
@@ -142,14 +151,17 @@ def determine_function_calls(request: YACCompletionRequest):
             }
         ],
         choices=choices)
+    print('determine choice response:', response)
+    return response
     # return 'render-visualization'  # TODO: testing, remove this later.
     # return 'both'  # TODO: testing, remove this later.
     # return 'get-subset-of-data'  # TODO: testing, remove this later.
-    return response.choices[0].text
+    # return response.choices[0].text
 
 
 def function_call_filter(request: YACCompletionRequest):
-    messages = list(request.messages)  # make a copy to avoid mutating the original
+    messages = copy.deepcopy(request.messages)  # make a copy to avoid mutating the original
+    strip_tool_calls(messages)
     interstitialMessage = {
         "role": "system",
         "content": f"You are a helpful assistant that will explore, and analyze datasets. The following defines the available datasets:\n{request.dataSchema}\nRight now you need to filter the data based on the users request."
@@ -157,7 +169,7 @@ def function_call_filter(request: YACCompletionRequest):
     messages.insert(len(messages) - 1, interstitialMessage)
 
 
-    response = agent.completions_guided_json(
+    response = agent.gpt_completions_guided_json(
         messages=messages,
         tools = [
             {
@@ -190,7 +202,7 @@ def function_call_filter(request: YACCompletionRequest):
                 },
             }
         ],
-        json_schema=json.dumps(
+        json_schema = json.dumps(
             {
                 "type": "object",
                 "properties": {
@@ -211,16 +223,16 @@ def function_call_filter(request: YACCompletionRequest):
                         "description": "The field to filter. Must be a quantitative field from the selected entity."
                     }
                 },
-                "required": ["entity", "field"],
-                "anyOf": [
-                    {"required": ["min"]},
-                    {"required": ["max"]}
-                ]
+                "required": ["entity", "field", "min", "max"],
+                "additionalProperties": False,
             }
         ))
-    return json.loads(response.choices[0].text)
+    print(response)
+    tool_calls = [{"name": "FilterData", "arguments": args} for args in response]
+    return tool_calls
+    # return json.loads(response.choices[0].text)
     # filterArgs = response.choices[0].text
-    # return {"name": "FilterData", "arguments": filterArgs}
+    # return {"name": "FilterData", "arguments": response}
 
 def function_call_render_visualization(request: YACCompletionRequest):
     f = open('./src/UDIGrammarSchema.json', 'r')
@@ -229,7 +241,7 @@ def function_call_render_visualization(request: YACCompletionRequest):
     f = open('./src/UDIGrammarSchema_spec_string.json', 'r')
     udi_grammar_string = f.read()
     f.close()
-    messages = list(request.messages)  # make a copy to avoid mutating the original
+    messages = copy.deepcopy(request.messages)  # make a copy to avoid mutating the original
     firstMessage = {
         "role": "system",
         "content": f"You are a helpful assistant that will explore, and analyze datasets with visualizations. The following defines the available datasets:\n{request.dataSchema}\nTypically, your actions will use the provided functions. You have access to the following functions."

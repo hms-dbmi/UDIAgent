@@ -1,8 +1,11 @@
+import json
 from openai import OpenAI
 from jinja2 import Template
 from transformers import AutoTokenizer
 from vllm import LLM, SamplingParams
-# import os
+import os
+from dotenv import load_dotenv
+load_dotenv()  # automatically loads from .env
 
 # Use multiprocess backend for workers
 # os.environ["VLLM_WORKER_MULTIPROC"] = "1"
@@ -16,10 +19,12 @@ class UDIAgent:
 
     def __init__(self,
                  model_name: str,
+                 gpt_model_name: str,
                  vllm_server_url = None,
                  vllm_server_port = None,
                 ):
         self.model_name = model_name
+        self.gpt_model_name = gpt_model_name
         if vllm_server_port is not None and vllm_server_url is not None:
             self.vllm_server_url = vllm_server_url
             self.vllm_server_port = vllm_server_port
@@ -32,6 +37,10 @@ class UDIAgent:
         self.model = OpenAI(
             api_key="EMPTY",
             base_url=base_url,
+        )
+
+        self.gpt_model = OpenAI(
+            api_key=os.getenv("OPENAI_API_KEY")
         )
     
     # def init_internal_models(self):
@@ -64,28 +73,92 @@ class UDIAgent:
         )
         return response
 
+    # def completions_guided_choice(self, messages: list[dict], tools: list[dict], choices: list[str]):
+    #     tokenizer = AutoTokenizer.from_pretrained(self.model_name)
+    #     chat_template = Template(tokenizer.chat_template)
+
+    #     prompt = chat_template.render(
+    #         messages=messages, tools=tools, add_generation_prompt=True
+    #     )
+
+    #     response = self.gpt_model.completions.create(
+    #         model=self.gpt_model_name,
+    #         prompt=prompt,
+    #         max_tokens=100,
+    #         extra_body={
+    #             "guided_choice": choices,
+    #         }
+
+    #     )
+    #     return response
+
+
     def completions_guided_choice(self, messages: list[dict], tools: list[dict], choices: list[str]):
-        tokenizer = AutoTokenizer.from_pretrained(self.model_name)
-        chat_template = Template(tokenizer.chat_template)
+        schema = {
+            "name": "ChoiceSelection",
+            "schema": {
+                "type": "object",
+                "additionalProperties": False,
+                "properties": {
+                    "choice": {
+                        "type": "string",
+                        "enum": choices
+                    }
+                },
+                "required": ["choice"]
+            },
+            "strict": True
+        }
 
-        prompt = chat_template.render(
-            messages=messages, tools=tools, add_generation_prompt=True
+        resp = self.gpt_model.chat.completions.create(
+            model=self.gpt_model_name,              # e.g. "gpt-4.1-mini"
+            messages=messages,                      # [{"role":"user","content":"..."}]
+            response_format={                       # <-- key part
+                "type": "json_schema",
+                "json_schema": schema
+            },
+            max_tokens=10
+        )
+        # Parse
+        content = resp.choices[0].message.content
+        # content is guaranteed to be valid JSON per schema
+        return json.loads(content)["choice"]
+
+    
+
+    def gpt_completions_guided_json(self, messages: list[dict], tools: list[dict], json_schema: str, n=1):
+        # Normalize schema to dict
+        if isinstance(json_schema, str):
+            try:
+                schema_obj = json.loads(json_schema)
+            except json.JSONDecodeError as e:
+                raise ValueError(f"json_schema must be a valid JSON string: {e}")
+        else:
+            schema_obj = json_schema
+
+        # Wrap for Structured Outputs (required shape)
+        schema_wrapper = {
+            "name": "GuidedJSON",
+            "schema": schema_obj,
+            "strict": True,  # disallow extra fields
+        }
+
+        resp = self.gpt_model.chat.completions.create(
+            model=self.gpt_model_name,           # e.g. "gpt-4.1-mini"
+            messages=messages,                   # [{"role": "user", "content": "..."}]
+            response_format={
+                "type": "json_schema",
+                "json_schema": schema_wrapper,
+            },
+            n=n,
+            temperature=0.2,
+            max_tokens=16_384,
         )
 
-        # todo, add prompt engineering here?
-        response = self.model.completions.create(
-            model=self.model_name,
-            prompt=prompt,
-            max_tokens=100,
-            # temperature=0.0,
-            # n=3,
-            # logprobs=3,
-            extra_body={
-                "guided_choice": choices,
-            }
+        # Each choice is guaranteed to be valid JSON per schema
+        outputs = [json.loads(choice.message.content) for choice in resp.choices]
+        return outputs
 
-        )
-        return response
 
     def completions_guided_json(self, messages: list[dict], tools: list[dict], json_schema: str, n=1):
         tokenizer = AutoTokenizer.from_pretrained(self.model_name)
@@ -99,7 +172,7 @@ class UDIAgent:
             model=self.model_name,
             prompt=prompt,
             max_tokens=16_384,
-            temperature=0.7,
+            temperature=0.2,
             n=n,
             extra_body={
                 "guided_json": json_schema,
