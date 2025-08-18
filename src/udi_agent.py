@@ -126,7 +126,7 @@ class UDIAgent:
 
     
 
-    def gpt_completions_guided_json(self, messages: list[dict], tools: list[dict], json_schema: str, n=1):
+    def gpt_completions_guided_json(self, messages: list[dict], json_schema: str, n=1):
         # Normalize schema to dict
         if isinstance(json_schema, str):
             try:

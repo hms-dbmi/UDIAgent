@@ -171,37 +171,37 @@ def function_call_filter(request: YACCompletionRequest):
 
     response = agent.gpt_completions_guided_json(
         messages=messages,
-        tools = [
-            {
-                "type": "function",
-                "function": {
-                    "name": "FilterData",
-                    "description": "Filter the data. Use a quantitative range filter on a field from the dataset.",
-                    "parameters": {
-                        "type": "object",
-                        "properties": {
-                            "min": {
-                                "type": "number",
-                                "description": "The minimum for the filter.",
-                            },
-                            "max": {
-                                "type": "number",
-                                "description": "The maximum for the filter.",
-                            },
-                            "entity": {
-                                "type": "string",
-                                "description": "The entity to filter based on the current dataset schema.",
-                            },
-                            "field": {
-                                "type": "string",
-                                "description": "The field to filter. Must be a quantitative field from the selected entity.",
-                            }
-                        },
-                        "required": ["entity", "field", "min", "max"],
-                    },
-                },
-            }
-        ],
+        # tools = [
+        #     {
+        #         "type": "function",
+        #         "function": {
+        #             "name": "FilterData",
+        #             "description": "Filter the data. Use a quantitative range filter on a field from the dataset.",
+        #             "parameters": {
+        #                 "type": "object",
+        #                 "properties": {
+        #                     "min": {
+        #                         "type": "number",
+        #                         "description": "The minimum for the filter.",
+        #                     },
+        #                     "max": {
+        #                         "type": "number",
+        #                         "description": "The maximum for the filter.",
+        #                     },
+        #                     "entity": {
+        #                         "type": "string",
+        #                         "description": "The entity to filter based on the current dataset schema.",
+        #                     },
+        #                     "field": {
+        #                         "type": "string",
+        #                         "description": "The field to filter. Must be a quantitative field from the selected entity.",
+        #                     }
+        #                 },
+        #                 "required": ["entity", "field", "min", "max"],
+        #             },
+        #         },
+        #     }
+        # ],
         json_schema = json.dumps(
             {
                 "type": "object",
