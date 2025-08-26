@@ -78,6 +78,7 @@ class YACCompletionRequest(BaseModel):
     model: str
     messages: list[dict]
     dataSchema: str
+    dataDomains: str
 
 
 @app.post("/v1/yac/completions")
@@ -127,7 +128,16 @@ def determine_function_calls(request: YACCompletionRequest):
     strip_tool_calls(messages)
     messages.append({
         "role": "system",
-        "content": "The user wants to investigate data. Based on the question determine if it can be answered with a visualization (respond 'render-visualization'), or if the question requires the data to be first filtered, then can be visualized ('both'). Finally, if the user just asks for the data to be updated respond with 'get-subset-of-data'."})
+        "content": """
+        The user wants to investigate data. Based on the question determine if it can be answered with a visualization (respond 'render-visualization'), or if the question requires the data to be first filtered, then can be visualized ('both').
+        Finally, if the user just asks for the data to be filtered respond with 'get-subset-of-data'.
+        
+        Assume that past tool calls in the history carry over to the current state:
+            - visualizations rendered still appear to the user
+            - data filter state still carries over
+        Take this into account when deciding. For instance, if the user asks for existing views to be filtered you just need to call 'get-subset-of-data', no need to render the visualization again.
+        Similarly, if the user asks for a new visualization, you do not need to filter the data again.
+        """})
     response = agent.completions_guided_choice(
         messages=messages,
         tools = [
@@ -164,7 +174,7 @@ def function_call_filter(request: YACCompletionRequest):
     strip_tool_calls(messages)
     interstitialMessage = {
         "role": "system",
-        "content": f"You are a helpful assistant that will explore, and analyze datasets. The following defines the available datasets:\n{request.dataSchema}\nRight now you need to filter the data based on the users request."
+        "content": f"You are a helpful assistant that will explore, and analyze datasets. The following defines the available dataset entities, fields, and their domains:\n{request.dataDomains}\nRight now you need to filter the data based on the users request."
     }
     messages.insert(len(messages) - 1, interstitialMessage)
 
