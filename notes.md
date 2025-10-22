@@ -1,7 +1,12 @@
-My steps for running inference:
 
+if h100 queue is long can use a100
 ```
-salloc -p kempner_h100 --account=kempner_mzitnik_lab -c 24 --mem=200G --gres=gpu:1 -t 0-23:00 -C h100
+salloc -p kempner --account=kempner_mzitnik_lab -c 16 --mem=200G --gres=gpu:1 -t 0-14:00 -C a100
+```
+
+My steps for running inference:
+```
+salloc -p kempner_h100 --account=kempner_mzitnik_lab -c 24 --mem=200G --gres=gpu:1 -t 0-14:00 -C h100
 tmux new -s vllm
 module load ncf/1.0.0-fasrc01
 module load miniconda3/py39_4.11.0-linux_x64-ncf
@@ -26,6 +31,13 @@ open login node:
 ```
 ssh -L 55001:localhost:8000 hostname
 ```
+
+to check if session still goin;
+squeue -u dlange
+
+to rejoin a session (not sure if need -i)
+srun --jobid=34215245 --pty bash -i
+
 
 
 salloc -p kempner_h100 --account=kempner_mzitnik_lab -c 24 --mem=200G --gres=gpu:1 -t 0-23:00 -C h100
