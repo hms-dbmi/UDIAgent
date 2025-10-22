@@ -117,7 +117,8 @@ class UDIAgent:
                 "type": "json_schema",
                 "json_schema": schema
             },
-            max_tokens=10
+            max_tokens=10,
+            temperature=0.0,
         )
         # Parse
         content = resp.choices[0].message.content
@@ -151,7 +152,7 @@ class UDIAgent:
                 "json_schema": schema_wrapper,
             },
             n=n,
-            temperature=0.2,
+            temperature=0.0,
             max_tokens=16_384,
         )
 
@@ -172,7 +173,7 @@ class UDIAgent:
             model=self.model_name,
             prompt=prompt,
             max_tokens=16_384,
-            temperature=0.2,
+            temperature=0.0,
             n=n,
             extra_body={
                 "guided_json": json_schema,
