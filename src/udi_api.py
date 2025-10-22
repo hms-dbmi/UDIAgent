@@ -94,6 +94,19 @@ def yac_completions(request: YACCompletionRequest):
     print('tool_calls:', tool_calls)
     return tool_calls
 
+
+@app.post("/v1/yac/benchmark")
+def yac_benchmark(request: YACCompletionRequest):
+    # copy of yac/completions, but also exports orchestrator choice for easier benchmarking
+    split_tool_calls(request)
+    calls_to_make = determine_function_calls(request)
+    tool_calls = []
+    if calls_to_make == "both" or calls_to_make == "get-subset-of-data":
+        tool_calls.extend(function_call_filter(request))
+    if calls_to_make == "both" or calls_to_make == "render-visualization":
+        tool_calls.append(function_call_render_visualization(request))
+    return { "tool_calls": tool_calls, "orchestrator_choice": calls_to_make }
+
 def split_tool_calls(request: YACCompletionRequest):
     # for each message in the request if there are multiple tool calls, split them into separate messages.
     # Note: this was needed because jinja template used cannot handle multiple tool calls in a single message.
