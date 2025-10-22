@@ -1,7 +1,9 @@
+import os
 import json
 from typing import Union
 from pydantic import BaseModel
 from fastapi import FastAPI
+from fastapi.responses import JSONResponse
 from udi_agent import UDIAgent
 from fastapi.middleware.cors import CORSMiddleware
 import copy
@@ -106,6 +108,21 @@ def yac_benchmark(request: YACCompletionRequest):
     if calls_to_make == "both" or calls_to_make == "render-visualization":
         tool_calls.append(function_call_render_visualization(request))
     return { "tool_calls": tool_calls, "orchestrator_choice": calls_to_make }
+
+@app.get("/v1/yac/benchmark_analysis")
+def yac_benchmark_nalysis():
+    RESULT_FILENAME = "./out/benchmark_analysis.json"
+    if not os.path.exists(RESULT_FILENAME):
+        return JSONResponse(
+            content={"error": f"File {RESULT_FILENAME} not found."},
+            status_code=404
+        )
+    
+    with open(RESULT_FILENAME, 'r') as f:
+        data = json.load(f)
+
+    return JSONResponse(content=data)
+
 
 def split_tool_calls(request: YACCompletionRequest):
     # for each message in the request if there are multiple tool calls, split them into separate messages.
