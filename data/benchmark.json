@@ -90,7 +90,7 @@
           }
         }
       ],
-      "orchestrator_choice": "render-visualization"
+      "orchestrator_choice": "get-subset-of-data"
     }
   }
 ]
