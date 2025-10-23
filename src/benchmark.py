@@ -13,8 +13,8 @@ import sys
 from jsonschema import validate, ValidationError
 
 PORT = 8000
-RESULT_FILENAME = "../out/benchmark_results.json"
-ANALYSIS_FILENAME = "../out/benchmark_analysis.json"
+RESULT_FILENAME = "./out/benchmark_results.json"
+ANALYSIS_FILENAME = "./out/benchmark_analysis.json"
 
 def run_benchmark(benchmark_file):
     with open(benchmark_file, 'r') as f:
@@ -202,8 +202,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run UDI Agent benchmark or analysis.")
     parser.add_argument(
         "-p", "--path",
-        default="../data/benchmark.json",
-        help="Path to benchmark JSON file (default: ../data/benchmark.json)"
+        default="./data/benchmark.json",
+        help="Path to benchmark JSON file (default: ./data/benchmark.json)"
     )
     parser.add_argument(
         "-a", "--action",
