@@ -10,3 +10,7 @@ To run the entrypoint into the multi-agent system I run a simple python api.
 
 
 This is the endpoint that is called by the YAC frontend. The `udi_api.py` script makes calls to openai and the finetuned model running with vllm.
+
+The multi-agent system currently makes calls to open ai and requires an open api key. This must be set in a .env file.
+
+`OPEN_API_KEY=your-key-goes-here`
