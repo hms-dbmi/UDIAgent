@@ -26,7 +26,7 @@ app.add_middleware(
 # init agent
 agent = UDIAgent(
     # model_name="agenticx/UDI-VIS-Beta-v0-Llama-3.1-8B",
-    model_name="/n/netscratch/mzitnik_lab/Lab/dlange/data/vis-v2/data/agenticx/UDI-VIS-Beta-v2-Llama-3.1-8B_merged",
+    model_name="/n/netscratch/mzitnik_lab/Lab/dlange/data/vis-v2/data/hidive/UDI-VIS-Beta-v2-Llama-3.1-8B",
     gpt_model_name="gpt-4.1",
     vllm_server_url="http://localhost",
     vllm_server_port=8080
