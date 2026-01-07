@@ -87,7 +87,6 @@ def check_rubric(expected, output, data_domains):
     # orchestrator makes correct decision (filter/vis/both)
     output_orchestrator_choice = output.get('orchestrator_choice', None)
     expected_orchestrator_choice = expected.get('orchestrator_choice', None)
-    orchestrator_choice_correct = output_orchestrator_choice == expected_orchestrator_choice
     update_rubric(rubric, 'orchestrator_choice', expected_orchestrator_choice, output_orchestrator_choice)
 
     # FILTER RUBRIC
