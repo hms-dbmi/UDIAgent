@@ -77,14 +77,22 @@ def analyze_results(results_data):
         data_domains = json.loads(data_domains)
         rubric_results = check_rubric(expected, output, data_domains)
         item["rubric"] = rubric_results
+        item["score"] = calculate_score(rubric_results)
     save_data_to_file(results_data, ANALYSIS_FILENAME)
     return results_data
 
 
-def update_rubric(rubric, key, expected, output, pass_value=None):
+def update_rubric(rubric, key, expected, output, group, points, pass_value=None):
     if pass_value is None:
         pass_value = expected == output
-    rubric[key] = {"expected": expected, "output": output, "pass": pass_value}
+    rubric[key] = {
+        "expected": expected,
+        "output": output,
+        "group": group,
+        "points": points,
+        "pass": pass_value,
+    }
+    return pass_value
 
 
 def check_rubric(expected, output, data_domains):
@@ -98,6 +106,8 @@ def check_rubric(expected, output, data_domains):
         "orchestrator_choice",
         expected_orchestrator_choice,
         output_orchestrator_choice,
+        "orchestrator",
+        100,
     )
 
     # FILTER RUBRIC
@@ -126,52 +136,64 @@ def check_filter_rubric(rubric, expected, output, data_domains):
         call for call in output_tool_calls if call["name"] == "FilterData"
     ][0]["arguments"]
 
-    # correct type of filter (point vs range)
+    # correct type of filter (point vs range): 40 points
     expected_filter_type = expected_filter_call_args["filter"]["filterType"]
     output_filter_type = output_filter_call_args["filter"]["filterType"]
-    update_rubric(rubric, "filter_type", expected_filter_type, output_filter_type)
-
-    # correct entity
-    output_filter_entity = output_filter_call_args["entity"]
     update_rubric(
+        rubric, "filter_type", expected_filter_type, output_filter_type, "filter", 40
+    )
+
+    # correct entity: 20 points
+    output_filter_entity = output_filter_call_args["entity"]
+    correct_entity = update_rubric(
         rubric,
         "filter_entity_correct",
         expected_filter_call_args["entity"],
         output_filter_entity,
+        "filter",
+        20,
     )
 
-    # valid entity (it exists in the data schema)
-    valid_entity_options = {x["entity"] for x in data_domains}
-    passed = output_filter_entity in valid_entity_options
-    update_rubric(
-        rubric,
-        "filter_entity_valid",
-        json.dumps(list(valid_entity_options)),
-        output_filter_entity,
-        passed,
-    )
+    # valid entity (it exists in the data schema): 5 points
+    if not correct_entity:
+        valid_entity_options = {x["entity"] for x in data_domains}
+        passed = output_filter_entity in valid_entity_options
+        update_rubric(
+            rubric,
+            "filter_entity_valid",
+            json.dumps(list(valid_entity_options)),
+            output_filter_entity,
+            "filter",
+            5,
+            passed,
+        )
 
-    # correct field
+    # correct field: 20 points
     output_filter_field = output_filter_call_args["field"]
-    update_rubric(
+    correct_field = update_rubric(
         rubric,
         "filter_field_correct",
         expected_filter_call_args["field"],
         output_filter_field,
+        "filter",
+        20,
     )
 
-    # valid field (it exists in the data schema)
-    valid_field_options = {x["field"] for x in data_domains}
-    passed = output_filter_field in valid_field_options
-    update_rubric(
-        rubric,
-        "filter_field_valid",
-        json.dumps(list(valid_field_options)),
-        output_filter_field,
-        passed,
-    )
+    # valid field (it exists in the data schema): 5 points
+    if not correct_field:
+        valid_field_options = {x["field"] for x in data_domains}
+        passed = output_filter_field in valid_field_options
+        update_rubric(
+            rubric,
+            "filter_field_valid",
+            json.dumps(list(valid_field_options)),
+            output_filter_field,
+            "filter",
+            5,
+            passed,
+        )
 
-    # interval correct (for range filters)
+    # interval correct (for range filters): 20 points
     if expected_filter_type == "interval":
         expected_interval = expected_filter_call_args["filter"]["intervalRange"]
         output_interval = output_filter_call_args["filter"]["intervalRange"]
@@ -180,29 +202,36 @@ def check_filter_rubric(rubric, expected, output, data_domains):
             "filter_interval_min",
             expected_interval["min"],
             output_interval["min"],
+            "filter",
+            10,
         )
         update_rubric(
             rubric,
             "filter_interval_max",
             expected_interval["max"],
             output_interval["max"],
+            "filter",
+            10,
         )
 
-    # point correct (for point filters)
+    # point correct (for point filters): 20 points
+    point_values_correct = False
     if expected_filter_type == "point":
         expected_points = expected_filter_call_args["filter"]["pointValues"]
         output_points = output_filter_call_args["filter"]["pointValues"]
-        passed = set(expected_points) == set(output_points)
+        point_values_correct = set(expected_points) == set(output_points)
         update_rubric(
             rubric,
             "filter_point_value",
             json.dumps(list(expected_points)),
             json.dumps(list(output_points)),
-            passed,
+            "filter",
+            20,
+            point_values_correct,
         )
 
-    # point valid (for point filters), the point values exist in the field domain
-    if expected_filter_type == "point":
+    # point valid (for point filters), the point values exist in the field domain: 5 points
+    if expected_filter_type == "point" and not point_values_correct:
         valid_points = [
             x["domain"]["values"]
             for x in data_domains
@@ -214,6 +243,8 @@ def check_filter_rubric(rubric, expected, output, data_domains):
             "filter_point_value_valid",
             json.dumps(list(valid_points)),
             json.dumps(list(output_points)),
+            "filter",
+            5,
             passed,
         )
 
@@ -238,25 +269,48 @@ def check_vis_rubric(rubric, expected, output, data_domains):
         valid_json = True
     except:
         valid_json = False
-    update_rubric(
-        rubric, "vis_spec_valid_json", expected_vis_spec, output_vis_spec, valid_json
-    )
 
     if not valid_json:
-        # worthless, stop here
+        # worthless, stop here, update rubric with failed test. (only include passed test if the vis spec isn't 100% correct)
+        update_rubric(
+            rubric,
+            "vis_spec_valid_json",
+            expected_vis_spec,
+            output_vis_spec,
+            "vis",
+            10,
+            valid_json,
+        )
         return rubric
 
-    # exact match of vis spec
+    # exact match of vis spec: 100 points
     spec_match = expected_vis_spec_json == output_vis_spec_json
     update_rubric(
-        rubric, "vis_spec_exact_match", expected_vis_spec, output_vis_spec, spec_match
+        rubric,
+        "vis_spec_exact_match",
+        expected_vis_spec,
+        output_vis_spec,
+        "vis",
+        100,
+        spec_match,
     )
 
     if spec_match:
         # perfect, stop here
         return rubric
 
-    # Generates specification that adheres to to udi grammar
+    # valid json but not exact match: 10 points
+    update_rubric(
+        rubric,
+        "vis_spec_valid_json",
+        expected_vis_spec,
+        output_vis_spec,
+        "vis",
+        10,
+        valid_json,
+    )
+
+    # Generates specification that adheres to to udi grammar: 10 points
     f = open("./src/UDIGrammarSchema.json", "r")
     udi_grammar_dict = json.load(f)
     f.close()
@@ -270,14 +324,78 @@ def check_vis_rubric(rubric, expected, output, data_domains):
         "vis_spec_adhere_grammar",
         expected_vis_spec,
         output_vis_spec,
+        "vis",
+        10,
         valid_udi_spec,
     )
 
-    # TODO: ideas for more checks
-    # selects valid entities and fields
-    # selects correct entities and fields
-    # check different parts of spec (source, transform, mark, encoding, etc.)
+    # the source part of the spec is correct: 25 points
+    expected_source = expected_vis_spec_json.get("source", None)
+    output_source = output_vis_spec_json.get("source", None)
+    update_rubric(
+        rubric, "vis_spec_source_correct", expected_source, output_source, "vis", 25
+    )
+
+    # the transformation part of the spec is correct: 25 points
+    expected_transformation = expected_vis_spec_json.get("transformation", None)
+    output_transformation = output_vis_spec_json.get("transformation", None)
+    update_rubric(
+        rubric,
+        "vis_spec_transformation_correct",
+        expected_transformation,
+        output_transformation,
+        "vis",
+        25,
+    )
+
+    # the representation part of the spec is correct: 25 points
+    expected_representation = expected_vis_spec_json.get("representation", None)
+    output_representation = output_vis_spec_json.get("representation", None)
+    update_rubric(
+        rubric,
+        "vis_spec_representation_correct",
+        expected_representation,
+        output_representation,
+        "vis",
+        25,
+    )
+
     return rubric
+
+
+def calculate_score(rubric):
+    """
+    For each rubric group calculate the total points.
+    The group score is the points divided by 100.
+    The overall score is the average of the group scores.
+
+    :param rubric: a dictionary of rubric items. Each item has a group (string), points (int), and pass (bool).
+    :return: a dictionary of group results (score and total points) and an overall score.
+    """
+    scores = {}
+    group_scores = {}
+    for item in rubric.values():
+        group = item["group"]
+        points = item["points"]
+        passed = item["pass"]
+
+        if group not in group_scores:
+            group_scores[group] = {"points": 0}
+
+        if passed:
+            group_scores[group]["points"] += points
+
+    overall_score = 0
+    for group, data in group_scores.items():
+        group_score = data["points"] / 100
+        group_scores[group]["score"] = group_score
+        overall_score += group_score
+
+    overall_score = overall_score / len(group_scores) if group_scores else 0
+    scores["groups"] = group_scores
+    scores["overall_score"] = overall_score
+
+    return scores
 
 
 if __name__ == "__main__":
