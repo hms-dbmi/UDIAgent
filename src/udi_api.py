@@ -114,6 +114,14 @@ class YACCompletionRequest(BaseModel):
     dataDomains: str
 
 
+class YACBenchmarkCompletionRequest(BaseModel):
+    model: str
+    messages: list[dict]
+    dataSchema: str
+    dataDomains: str
+    tool_calls: str | None = None
+
+
 @app.post("/v1/yac/completions")
 def yac_completions(
     request: YACCompletionRequest, token_payload: dict = Depends(verify_jwt)
@@ -132,11 +140,14 @@ def yac_completions(
 
 @app.post("/v1/yac/benchmark")
 def yac_benchmark(
-    request: YACCompletionRequest, token_payload: dict = Depends(verify_jwt)
+    request: YACBenchmarkCompletionRequest, token_payload: dict = Depends(verify_jwt)
 ):
     # copy of yac/completions, but also exports orchestrator choice for easier benchmarking
     split_tool_calls(request)
-    calls_to_make = determine_function_calls(request)
+    if request.tool_calls is not None:
+        calls_to_make = request.tool_calls
+    else:
+        calls_to_make = determine_function_calls(request)
     tool_calls = []
     if calls_to_make == "both" or calls_to_make == "get-subset-of-data":
         tool_calls.extend(function_call_filter(request))
