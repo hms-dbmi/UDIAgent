@@ -2,7 +2,8 @@ import json
 from openai import OpenAI
 from jinja2 import Template
 from transformers import AutoTokenizer
-from vllm import LLM, SamplingParams
+
+# from vllm import LLM, SamplingParams
 import os
 from dotenv import load_dotenv
 
