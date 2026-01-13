@@ -7,15 +7,20 @@ and record the types of errors made.
 It also includes the option to run with different information ablated, such as field descriptions.
 """
 
+from datetime import datetime
 import json
 import requests
 import argparse
 import sys
+import uuid
 from jsonschema import validate, ValidationError
 
 PORT = 8000
-RESULT_FILENAME = "./out/benchmark_results.json"
-ANALYSIS_FILENAME = "./out/benchmark_analysis.json"
+timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+RESULT_FILENAME = "./out/" + timestamp + "/benchmark_results.json"
+ANALYSIS_FILENAME = "./out/" + timestamp + "/benchmark_analysis.json"
+
+run_id = str(uuid.uuid4())
 
 
 def run_benchmark(benchmark_file):
@@ -37,13 +42,26 @@ def save_data_to_file(data, path):
 
 
 def collect_results(benchmark_data):
+    # get free text description of benchmark run from user input
+    description = input("Enter a description for this benchmark run: ")
+
     for index, item in enumerate(benchmark_data):
         print("Processing item:", index + 1, "of", len(benchmark_data))
-        input, expected = item["input"], item["expected"]
+        input = item["input"]
         output = fetch_agent_output(input)
         item["output"] = output
-    save_data_to_file(benchmark_data, RESULT_FILENAME)
-    return benchmark_data
+
+    benchmark_results = {
+        "metadata": {
+            "run_id": run_id,
+            "timestamp": timestamp,
+            "description": description,
+        },
+        "results": benchmark_data,
+    }
+
+    save_data_to_file(benchmark_results, RESULT_FILENAME)
+    return benchmark_results
 
 
 def fetch_agent_output(input):
@@ -67,11 +85,10 @@ def fetch_agent_output(input):
     except Exception as e:
         print("Error querying LLM:", e)
         return None
-    return
 
 
 def analyze_results(results_data):
-    for item in results_data:
+    for item in results_data["results"]:
         input, expected, output = item["input"], item["expected"], item["output"]
         data_domains = input.get("dataDomains", "[]")
         data_domains = json.loads(data_domains)
@@ -79,12 +96,19 @@ def analyze_results(results_data):
         item["rubric"] = rubric_results
         item["score"] = calculate_item_score(rubric_results)
 
-    overall_scores = calculate_overall_scores(results_data)
+    overall_scores = calculate_overall_scores(results_data["results"])
+
+    analysis = {
+        "metadata": results_data["metadata"],
+        "scores": overall_scores,
+        "results": results_data["results"],
+    }
 
     save_data_to_file(
-        {"scores": overall_scores, "results": results_data}, ANALYSIS_FILENAME
+        analysis,
+        ANALYSIS_FILENAME,
     )
-    return results_data
+    return analysis
 
 
 def update_rubric(rubric, key, expected, output, group, points, pass_value=None):
