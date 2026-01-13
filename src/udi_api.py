@@ -119,7 +119,7 @@ class YACBenchmarkCompletionRequest(BaseModel):
     messages: list[dict]
     dataSchema: str
     dataDomains: str
-    tool_calls: str | None = None
+    orchestrator_choice: str | None = None
 
 
 @app.post("/v1/yac/completions")
@@ -144,8 +144,8 @@ def yac_benchmark(
 ):
     # copy of yac/completions, but also exports orchestrator choice for easier benchmarking
     split_tool_calls(request)
-    if request.tool_calls is not None:
-        calls_to_make = request.tool_calls
+    if request.orchestrator_choice is not None:
+        calls_to_make = request.orchestrator_choice
     else:
         calls_to_make = determine_function_calls(request)
     tool_calls = []

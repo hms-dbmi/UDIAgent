@@ -14,6 +14,7 @@ import argparse
 import sys
 import uuid
 from jsonschema import validate, ValidationError
+import copy
 
 PORT = 8000
 timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
@@ -23,11 +24,11 @@ ANALYSIS_FILENAME = "./out/" + timestamp + "/benchmark_analysis.json"
 run_id = str(uuid.uuid4())
 
 
-def run_benchmark(benchmark_file):
+def run_benchmark(benchmark_file, no_orchestrator=False):
     with open(benchmark_file, "r") as f:
         benchmark_data = json.load(f)
 
-    results = collect_results(benchmark_data)
+    results = collect_results(benchmark_data, no_orchestrator=no_orchestrator)
     analysis = analyze_results(results)
     return
 
@@ -41,14 +42,14 @@ def save_data_to_file(data, path):
         print(f"Failed to save data to {path}: {e}")
 
 
-def collect_results(benchmark_data):
+def collect_results(benchmark_data, no_orchestrator=False):
     # get free text description of benchmark run from user input
     description = input("Enter a description for this benchmark run: ")
 
     for index, item in enumerate(benchmark_data):
         print("Processing item:", index + 1, "of", len(benchmark_data))
-        input = item["input"]
-        output = fetch_agent_output(input)
+        input, expected = item["input"], expected = item["expected"]
+        output = fetch_agent_output(input, expected, no_orchestrator=no_orchestrator)
         item["output"] = output
 
     benchmark_results = {
@@ -64,14 +65,18 @@ def collect_results(benchmark_data):
     return benchmark_results
 
 
-def fetch_agent_output(input):
+def fetch_agent_output(input, expected, no_orchestrator=False):
     # server = f"http://localhost/v1"
     server = f"http://127.0.0.1:{PORT}/v1"
     try:
+        payload = copy.deepcopy(input)
+        if no_orchestrator:
+            payload["orchestrator_choice"] = expected["orchestrator_choice"]
+
         response = requests.post(
             f"{server}/yac/benchmark",
             headers={"Content-Type": "application/json"},
-            data=json.dumps(input),
+            data=json.dumps(payload),
         )
 
         if not response.ok:
@@ -507,6 +512,14 @@ if __name__ == "__main__":
         default="full",
         help="Action to perform: 'full' (run benchmark then analyze), 'collect' (run benchmark only), or 'analyze' (run analysis only).",
     )
+
+    # add option to bypass orchestrator step.
+    parser.add_argument(
+        "--no-orchestrator",
+        action="store_true",
+        help="If set, the benchmark will bypass the orchestrator step and directly call the correct tools.",
+    )
+
     # parser.add_argument(
     #     "--out",
     #     default="./data/benchmark_results.json",
@@ -517,7 +530,7 @@ if __name__ == "__main__":
 
     if args.action == "full":
         # run_benchmark will run collection and analysis internally
-        run_benchmark(args.path)
+        run_benchmark(args.path, args.no_orchestrator)
         sys.exit(0)
 
     if args.action == "collect":
@@ -527,7 +540,7 @@ if __name__ == "__main__":
         except Exception as e:
             print(f"Failed to read benchmark file {args.path}: {e}")
             sys.exit(1)
-        collect_results(benchmark_data)
+        collect_results(benchmark_data, args.no_orchestrator)
 
         sys.exit(0)
 
