@@ -10,6 +10,7 @@ import copy
 
 from jose import jwt, JWTError
 from dotenv import load_dotenv
+
 load_dotenv()  # automatically loads from .env
 
 SECRET_KEY = os.getenv("JWT_SECRET_KEY")
@@ -37,7 +38,7 @@ agent = UDIAgent(
     model_name=MODEL_NAME,
     gpt_model_name="gpt-4.1",
     vllm_server_url="http://localhost",
-    vllm_server_port=8080
+    vllm_server_port=8080,
 )
 
 # @app.get("/test1")
@@ -52,21 +53,23 @@ agent = UDIAgent(
 #     response = agent.test_completions_with_more_params()
 #     return { "response": response }
 
+
 def verify_jwt(authorization: str = Header(...)):
     if INSECURE_DEV_MODE:
         # skip verification in dev mode
         return {"dev_mode": True}
     if not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Invalid authorization header")
-    
-    token = authorization[len("Bearer "):]  # strip "Bearer "
-    
+
+    token = authorization[len("Bearer ") :]  # strip "Bearer "
+
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         # Optionally, you can return payload info here if needed
         return payload
     except JWTError:
         raise HTTPException(status_code=401, detail="Invalid or expired token")
+
 
 @app.get("/")
 def read_root():
@@ -75,19 +78,21 @@ def read_root():
         "status": "running",
         "endpoints": [
             {"path": "/", "method": "GET", "description": "API status and info"},
-        ]
+        ],
     }
+
 
 class ChatCompletionRequest(BaseModel):
     model: str
     messages: list[dict]
+
 
 # match openai api endpoints
 # https://platform.openai.com/docs/api-reference/chat
 # @app.post("/v1/chat/completions")
 # def chat_completions(request: ChatCompletionRequest):
 #     response = agent.chat_completions(messages=request.messages)
-#     return { "response": response } 
+#     return { "response": response }
 
 
 class CompletionRequest(BaseModel):
@@ -95,10 +100,12 @@ class CompletionRequest(BaseModel):
     messages: list[dict]
     tools: list[dict]
 
+
 # @app.post("/v1/completions")
 # def completions(request: CompletionRequest):
 #     response = agent.completions(messages=request.messages, tools=request.tools)
 #     return { "response": response }
+
 
 class YACCompletionRequest(BaseModel):
     model: str
@@ -109,25 +116,23 @@ class YACCompletionRequest(BaseModel):
 
 @app.post("/v1/yac/completions")
 def yac_completions(
-    request: YACCompletionRequest,
-    token_payload: dict = Depends(verify_jwt)
+    request: YACCompletionRequest, token_payload: dict = Depends(verify_jwt)
 ):
     split_tool_calls(request)
     calls_to_make = determine_function_calls(request)
-    print('calls_to_make:', calls_to_make)
+    print("calls_to_make:", calls_to_make)
     tool_calls = []
     if calls_to_make == "both" or calls_to_make == "get-subset-of-data":
         tool_calls.extend(function_call_filter(request))
     if calls_to_make == "both" or calls_to_make == "render-visualization":
         tool_calls.append(function_call_render_visualization(request))
-    print('tool_calls:', tool_calls)
+    print("tool_calls:", tool_calls)
     return tool_calls
 
 
 @app.post("/v1/yac/benchmark")
 def yac_benchmark(
-    request: YACCompletionRequest,
-    token_payload: dict = Depends(verify_jwt)
+    request: YACCompletionRequest, token_payload: dict = Depends(verify_jwt)
 ):
     # copy of yac/completions, but also exports orchestrator choice for easier benchmarking
     split_tool_calls(request)
@@ -137,18 +142,18 @@ def yac_benchmark(
         tool_calls.extend(function_call_filter(request))
     if calls_to_make == "both" or calls_to_make == "render-visualization":
         tool_calls.append(function_call_render_visualization(request))
-    return { "tool_calls": tool_calls, "orchestrator_choice": calls_to_make }
+    return {"tool_calls": tool_calls, "orchestrator_choice": calls_to_make}
+
 
 @app.get("/v1/yac/benchmark_analysis")
 def yac_benchmark_nalysis():
     RESULT_FILENAME = "./out/benchmark_analysis.json"
     if not os.path.exists(RESULT_FILENAME):
         return JSONResponse(
-            content={"error": f"File {RESULT_FILENAME} not found."},
-            status_code=404
+            content={"error": f"File {RESULT_FILENAME} not found."}, status_code=404
         )
-    
-    with open(RESULT_FILENAME, 'r') as f:
+
+    with open(RESULT_FILENAME, "r") as f:
         data = json.load(f)
 
     return JSONResponse(content=data)
@@ -159,13 +164,13 @@ def split_tool_calls(request: YACCompletionRequest):
     # Note: this was needed because jinja template used cannot handle multiple tool calls in a single message.
     new_messages = []
     for message in request.messages:
-        if 'tool_calls' in message:
-            tool_calls = message['tool_calls']
+        if "tool_calls" in message:
+            tool_calls = message["tool_calls"]
             if isinstance(tool_calls, list) and len(tool_calls) > 1:
                 # split into multiple messages
                 for i, tool_call in enumerate(tool_calls):
                     new_message = message.copy()
-                    new_message['tool_calls'] = [tool_call]
+                    new_message["tool_calls"] = [tool_call]
                     new_messages.append(new_message)
         else:
             new_messages.append(message)
@@ -177,18 +182,22 @@ def split_tool_calls(request: YACCompletionRequest):
 def strip_tool_calls(messages: list[dict]):
     # remove tool calls from messages
     for message in messages:
-        if 'tool_calls' in message:
-            del message['tool_calls']
+        if "tool_calls" in message:
+            del message["tool_calls"]
     return messages
 
+
 def determine_function_calls(request: YACCompletionRequest):
-    choices = [ 'render-visualization', 'get-subset-of-data', 'both']
+    choices = ["render-visualization", "get-subset-of-data", "both"]
     # add some prompt engineering into the messages.
-    messages = copy.deepcopy(request.messages)  # make a copy to avoid mutating the original
+    messages = copy.deepcopy(
+        request.messages
+    )  # make a copy to avoid mutating the original
     strip_tool_calls(messages)
-    messages.append({
-        "role": "system",
-        "content": """
+    messages.append(
+        {
+            "role": "system",
+            "content": """
         The user wants to investigate data. Based on the question determine if it can be answered with a visualization (respond 'render-visualization'), or if the question requires the data to be first filtered, then can be visualized ('both').
         Finally, if the user just asks for the data to be filtered respond with 'get-subset-of-data'.
         
@@ -197,10 +206,12 @@ def determine_function_calls(request: YACCompletionRequest):
             - data filter state still carries over
         Take this into account when deciding. For instance, if the user asks for existing views to be filtered you just need to call 'get-subset-of-data', no need to render the visualization again.
         Similarly, if the user asks for a new visualization, you do not need to filter the data again.
-        """})
+        """,
+        }
+    )
     response = agent.completions_guided_choice(
         messages=messages,
-        tools = [
+        tools=[
             {
                 "type": "function",
                 "function": {
@@ -212,16 +223,17 @@ def determine_function_calls(request: YACCompletionRequest):
                             "choice": {
                                 "type": "string",
                                 "enum": choices,
-                                "description": "The plan for answering the users's query."
+                                "description": "The plan for answering the users's query.",
                             }
                         },
-                        "required": ["choice"]
-                    }
-                }
+                        "required": ["choice"],
+                    },
+                },
             }
         ],
-        choices=choices)
-    print('determine choice response:', response)
+        choices=choices,
+    )
+    print("determine choice response:", response)
     return response
     # return 'render-visualization'  # TODO: testing, remove this later.
     # return 'both'  # TODO: testing, remove this later.
@@ -230,75 +242,68 @@ def determine_function_calls(request: YACCompletionRequest):
 
 
 def function_call_filter(request: YACCompletionRequest):
-    messages = copy.deepcopy(request.messages)  # make a copy to avoid mutating the original
+    messages = copy.deepcopy(
+        request.messages
+    )  # make a copy to avoid mutating the original
     strip_tool_calls(messages)
     interstitialMessage = {
         "role": "system",
-        "content": f"You are a helpful assistant that will explore, and analyze datasets. The following defines the available dataset entities, fields, and their domains:\n{request.dataDomains}\nRight now you need to filter the data based on the users request."
+        "content": f"You are a helpful assistant that will explore, and analyze datasets. The following defines the available dataset entities, fields, and their domains:\n{request.dataDomains}\nRight now you need to filter the data based on the users request.",
     }
     messages.insert(len(messages) - 1, interstitialMessage)
 
-
-# This schema is not as constrained as it could be:
-#   ideally only one of intervalRange and pointValues would be populated
-#   the filtertype would match which of them was populated.
-# These are possible with json schema, but was having trouble getting chat gpt to
-# to work well with anyof / oneof thingies.
+    # This schema is not as constrained as it could be:
+    #   ideally only one of intervalRange and pointValues would be populated
+    #   the filtertype would match which of them was populated.
+    # These are possible with json schema, but was having trouble getting chat gpt to
+    # to work well with anyof / oneof thingies.
     response = agent.gpt_completions_guided_json(
         messages=messages,
-        json_schema = json.dumps(
-            
-            
-            
+        json_schema=json.dumps(
             {
-            "type": "object",
-            "properties": {
-                "filter": {
-                    "type": "object",
-                    "properties": {
-                        "filterType": { "enum": ["point", "interval"] },
-                        "intervalRange": {
-                            "type": "object",
-                            "properties": {
-                                "min": {
-                                    "type": "number",
-                                    "description": "The minimum for the filter."
+                "type": "object",
+                "properties": {
+                    "filter": {
+                        "type": "object",
+                        "properties": {
+                            "filterType": {"enum": ["point", "interval"]},
+                            "intervalRange": {
+                                "type": "object",
+                                "properties": {
+                                    "min": {
+                                        "type": "number",
+                                        "description": "The minimum for the filter.",
+                                    },
+                                    "max": {
+                                        "type": "number",
+                                        "description": "The maximum for the filter.",
+                                    },
                                 },
-                                "max": {
-                                    "type": "number",
-                                    "description": "The maximum for the filter."
-                                }
+                                "required": ["min", "max"],
+                                "additionalProperties": False,
                             },
-                            "required": ["min", "max"],
-                            "additionalProperties": False
+                            "pointValues": {
+                                "type": "array",
+                                "items": {"type": "string"},
+                                "minItems": 1,
+                                "description": "The values to filter for categorical fields.",
+                            },
                         },
-                        "pointValues": {
-                            "type": "array",
-                            "items": { "type": "string" },
-                            "minItems": 1,
-                            "description": "The values to filter for categorical fields."
-                        }
-                    },
-                    "required": ["filterType","intervalRange","pointValues"],
-                    "additionalProperties": False
+                        "required": ["filterType", "intervalRange", "pointValues"],
+                        "additionalProperties": False,
                     },
                     "entity": {
                         "type": "string",
-                        "description": "The entity to filter based on the current dataset schema."
+                        "description": "The entity to filter based on the current dataset schema.",
                     },
                     "field": {
                         "type": "string",
-                        "description": "The field to filter. Must be a quantitative field from the selected entity."
-                    }
+                        "description": "The field to filter. Must be a quantitative field from the selected entity.",
+                    },
                 },
                 "required": ["entity", "field", "filter"],
-                "additionalProperties": False
+                "additionalProperties": False,
             }
-
-        
-
-
-
             # {
             #     "type": "object",
             #     "properties": {
@@ -345,7 +350,8 @@ def function_call_filter(request: YACCompletionRequest):
             #     "required": ["entity", "field", "filter"],
             #     "additionalProperties": False,
             # }
-        ))
+        ),
+    )
     print(response)
     tool_calls = [{"name": "FilterData", "arguments": args} for args in response]
     return tool_calls
@@ -353,22 +359,25 @@ def function_call_filter(request: YACCompletionRequest):
     # filterArgs = response.choices[0].text
     # return {"name": "FilterData", "arguments": response}
 
+
 def function_call_render_visualization(request: YACCompletionRequest):
-    f = open('./src/UDIGrammarSchema.json', 'r')
+    f = open("./src/UDIGrammarSchema.json", "r")
     udi_grammar_dict = json.load(f)
     f.close()
-    f = open('./src/UDIGrammarSchema_spec_string.json', 'r')
+    f = open("./src/UDIGrammarSchema_spec_string.json", "r")
     udi_grammar_string = f.read()
     f.close()
-    messages = copy.deepcopy(request.messages)  # make a copy to avoid mutating the original
+    messages = copy.deepcopy(
+        request.messages
+    )  # make a copy to avoid mutating the original
     firstMessage = {
         "role": "system",
-        "content": f"You are a helpful assistant that will explore, and analyze datasets with visualizations. The following defines the available datasets:\n{request.dataSchema}\nTypically, your actions will use the provided functions. You have access to the following functions."
+        "content": f"You are a helpful assistant that will explore, and analyze datasets with visualizations. The following defines the available datasets:\n{request.dataSchema}\nTypically, your actions will use the provided functions. You have access to the following functions.",
     }
     messages.insert(0, firstMessage)
     response = agent.completions_guided_json(
         messages=messages,
-        tools = [
+        tools=[
             {
                 "type": "function",
                 "function": {
@@ -384,13 +393,16 @@ def function_call_render_visualization(request: YACCompletionRequest):
                 },
             }
         ],
-        json_schema=udi_grammar_string)
+        json_schema=udi_grammar_string,
+    )
     return json.loads(response.choices[0].text)
     # return {"name": "RenderVisualization", "arguments": {"spec": spec}}
+
 
 class UDICompletionRequest(BaseModel):
     model: str
     messages: list[dict]
+
 
 # @app.post("/v1/udi/completions")
 # def udi_completions(request: UDICompletionRequest):
@@ -420,11 +432,11 @@ class UDICompletionRequest(BaseModel):
 #     except json.JSONDecodeError as e:
 #         print(json)
 #         raise ValueError(f"Failed to parse tool calls: {e}")
-    
+
 #     # find the tool call with name "RenderVisualization"
 #     if not isinstance(tool_calls, list):
 #         tool_calls = [tool_calls]
-        
+
 #     for tool_call in tool_calls:
 #         if tool_call.get("name") == "RenderVisualization":
 #             # return the arguments of the tool call

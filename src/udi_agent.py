@@ -5,6 +5,7 @@ from transformers import AutoTokenizer
 from vllm import LLM, SamplingParams
 import os
 from dotenv import load_dotenv
+
 load_dotenv()  # automatically loads from .env
 
 # Use multiprocess backend for workers
@@ -13,16 +14,16 @@ load_dotenv()  # automatically loads from .env
 # os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
 
 
-
 class UDIAgent:
     """UDIAgent for requesting UDI grammar given a prompt."""
 
-    def __init__(self,
-                 model_name: str,
-                 gpt_model_name: str,
-                 vllm_server_url = None,
-                 vllm_server_port = None,
-                ):
+    def __init__(
+        self,
+        model_name: str,
+        gpt_model_name: str,
+        vllm_server_url=None,
+        vllm_server_port=None,
+    ):
         self.model_name = model_name
         self.gpt_model_name = gpt_model_name
         if vllm_server_port is not None and vllm_server_url is not None:
@@ -39,10 +40,8 @@ class UDIAgent:
             base_url=base_url,
         )
 
-        self.gpt_model = OpenAI(
-            api_key=os.getenv("OPENAI_API_KEY")
-        )
-    
+        self.gpt_model = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
     # def init_internal_models(self):
     #     self.llm = LLM(
     #         model=self.model_name,
@@ -92,30 +91,26 @@ class UDIAgent:
     #     )
     #     return response
 
-
-    def completions_guided_choice(self, messages: list[dict], tools: list[dict], choices: list[str]):
+    def completions_guided_choice(
+        self, messages: list[dict], tools: list[dict], choices: list[str]
+    ):
         schema = {
             "name": "ChoiceSelection",
             "schema": {
                 "type": "object",
                 "additionalProperties": False,
-                "properties": {
-                    "choice": {
-                        "type": "string",
-                        "enum": choices
-                    }
-                },
-                "required": ["choice"]
+                "properties": {"choice": {"type": "string", "enum": choices}},
+                "required": ["choice"],
             },
-            "strict": True
+            "strict": True,
         }
 
         resp = self.gpt_model.chat.completions.create(
-            model=self.gpt_model_name,              # e.g. "gpt-4.1-mini"
-            messages=messages,                      # [{"role":"user","content":"..."}]
-            response_format={                       # <-- key part
+            model=self.gpt_model_name,  # e.g. "gpt-4.1-mini"
+            messages=messages,  # [{"role":"user","content":"..."}]
+            response_format={  # <-- key part
                 "type": "json_schema",
-                "json_schema": schema
+                "json_schema": schema,
             },
             max_tokens=10,
             temperature=0.0,
@@ -124,8 +119,6 @@ class UDIAgent:
         content = resp.choices[0].message.content
         # content is guaranteed to be valid JSON per schema
         return json.loads(content)["choice"]
-
-    
 
     def gpt_completions_guided_json(self, messages: list[dict], json_schema: str, n=1):
         # Normalize schema to dict
@@ -145,8 +138,8 @@ class UDIAgent:
         }
 
         resp = self.gpt_model.chat.completions.create(
-            model=self.gpt_model_name,           # e.g. "gpt-4.1-mini"
-            messages=messages,                   # [{"role": "user", "content": "..."}]
+            model=self.gpt_model_name,  # e.g. "gpt-4.1-mini"
+            messages=messages,  # [{"role": "user", "content": "..."}]
             response_format={
                 "type": "json_schema",
                 "json_schema": schema_wrapper,
@@ -160,13 +153,15 @@ class UDIAgent:
         outputs = [json.loads(choice.message.content) for choice in resp.choices]
         return outputs
 
-
-    def completions_guided_json(self, messages: list[dict], tools: list[dict], json_schema: str, n=1):
+    def completions_guided_json(
+        self, messages: list[dict], tools: list[dict], json_schema: str, n=1
+    ):
         tokenizer = AutoTokenizer.from_pretrained(self.model_name)
         chat_template = Template(tokenizer.chat_template)
 
         prompt = chat_template.render(
-        messages=messages, tools=tools, add_generation_prompt=True)
+            messages=messages, tools=tools, add_generation_prompt=True
+        )
 
         # todo, add prompt engineering here?
         response = self.model.completions.create(
@@ -177,7 +172,7 @@ class UDIAgent:
             n=n,
             extra_body={
                 "guided_json": json_schema,
-            }
+            },
         )
         return response
 
@@ -201,7 +196,6 @@ class UDIAgent:
 
     #     prompt = chat_template.render(
     #         messages=messages, tools=tools, add_generation_prompt=True)
-
 
     #     print(f"Prompt: {prompt}")
 
@@ -262,7 +256,6 @@ class UDIAgent:
     #     )
     #     return response
 
-
     def completions(self, messages: list[dict], tools: list[dict]):
         tokenizer = AutoTokenizer.from_pretrained(self.model_name)
         chat_template = Template(tokenizer.chat_template)
@@ -272,12 +265,12 @@ class UDIAgent:
         # Debugging, remove all the tool_calls from the messages
         # TODO: try reformatting as strings.
         for message in messages:
-            if 'tool_calls' in message:
-                del message['tool_calls']
+            if "tool_calls" in message:
+                del message["tool_calls"]
 
         prompt = chat_template.render(
-            messages=messages, tools=tools, add_generation_prompt=True)
-
+            messages=messages, tools=tools, add_generation_prompt=True
+        )
 
         print(f"Prompt: {prompt}")
 
