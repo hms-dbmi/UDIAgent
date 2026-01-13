@@ -77,8 +77,13 @@ def analyze_results(results_data):
         data_domains = json.loads(data_domains)
         rubric_results = check_rubric(expected, output, data_domains)
         item["rubric"] = rubric_results
-        item["score"] = calculate_score(rubric_results)
-    save_data_to_file(results_data, ANALYSIS_FILENAME)
+        item["score"] = calculate_item_score(rubric_results)
+
+    overall_scores = calculate_overall_scores(results_data)
+
+    save_data_to_file(
+        {"scores": overall_scores, "results": results_data}, ANALYSIS_FILENAME
+    )
     return results_data
 
 
@@ -363,7 +368,7 @@ def check_vis_rubric(rubric, expected, output, data_domains):
     return rubric
 
 
-def calculate_score(rubric):
+def calculate_item_score(rubric):
     """
     For each rubric group calculate the total points.
     The group score is the points divided by 100.
@@ -396,6 +401,70 @@ def calculate_score(rubric):
     scores["overall_score"] = overall_score
 
     return scores
+
+
+def calculate_overall_scores(results_data):
+    """
+    Calculate overall scores of results_data. It will include an average of all overall_score values.
+    And the count of items with a score of 1.0 out of the total number of items.
+
+    :param results_data: List of results. Each result will have a "score" field with "overall_score" and "groups" with group scores. Each group will have a "points" and "score"
+    """
+
+    score_total = 0
+    correct_count = 0
+    group_aggregates = {}
+
+    for item in results_data:
+        item_score = item.get("score", {})
+        overall_score = item_score.get("overall_score", 0)
+        score_total += overall_score
+        if overall_score == 1.0:
+            correct_count += 1
+
+        groups = item_score.get("groups", {})
+        for group_name, group_data in groups.items():
+            if group_name not in group_aggregates:
+                group_aggregates[group_name] = {
+                    "score_total": 0,
+                    "correct_count": 0,
+                    "count": 0,
+                }
+
+            group_aggregate = group_aggregates[group_name]
+
+            group_aggregate["score_total"] += group_data.get("score", 0)
+            if group_data.get("score", 0) == 1.0:
+                group_aggregate["correct_count"] += 1
+            group_aggregate["count"] += 1
+
+    overall_score = score_total / len(results_data) if results_data else 0
+    percent_correct = correct_count / len(results_data) if results_data else 0
+
+    # Calculate group aggregates
+    for group_name, group_data in group_aggregates.items():
+        group_data["overall_score"] = (
+            group_data["score_total"] / group_data["count"]
+            if group_data["count"]
+            else 0
+        )
+        group_data["percent_correct"] = (
+            group_data["correct_count"] / group_data["count"]
+            if group_data["count"]
+            else 0
+        )
+
+        del group_data["score_total"]
+        group_data["total_count"] = group_data["count"]
+        del group_data["count"]
+
+    return {
+        "overall_score": overall_score,
+        "correct_percent": percent_correct,
+        "correct_count": correct_count,
+        "total_count": len(results_data),
+        "group_aggregates": group_aggregates,
+    }
 
 
 if __name__ == "__main__":
