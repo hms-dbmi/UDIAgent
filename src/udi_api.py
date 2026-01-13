@@ -15,6 +15,7 @@ load_dotenv()  # automatically loads from .env
 SECRET_KEY = os.getenv("JWT_SECRET_KEY")
 ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
 MODEL_NAME = os.getenv("UDI_MODEL_NAME")
+INSECURE_DEV_MODE = os.getenv("INSECURE_DEV_MODE", "0") == "1"
 
 app = FastAPI()
 
@@ -52,6 +53,9 @@ agent = UDIAgent(
 #     return { "response": response }
 
 def verify_jwt(authorization: str = Header(...)):
+    if INSECURE_DEV_MODE:
+        # skip verification in dev mode
+        return {"dev_mode": True}
     if not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Invalid authorization header")
     
