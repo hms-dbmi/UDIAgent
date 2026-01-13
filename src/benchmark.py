@@ -57,6 +57,7 @@ def collect_results(benchmark_data, no_orchestrator=False):
             "run_id": run_id,
             "timestamp": timestamp,
             "description": description,
+            "no_orchestrator": no_orchestrator,
         },
         "results": benchmark_data,
     }
