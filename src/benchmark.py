@@ -15,8 +15,9 @@ import sys
 import uuid
 from jsonschema import validate, ValidationError
 import copy
+import os
 
-PORT = 8000
+PORT = 8007
 timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 RESULT_FILENAME = "./out/" + timestamp + "/benchmark_results.json"
 ANALYSIS_FILENAME = "./out/" + timestamp + "/benchmark_analysis.json"
@@ -34,6 +35,8 @@ def run_benchmark(benchmark_file, no_orchestrator=False):
 
 
 def save_data_to_file(data, path):
+    # ensure the directory exists
+    os.makedirs(os.path.dirname(path), exist_ok=True)
     try:
         with open(path, "w") as f:
             json.dump(data, f, indent=2)
@@ -48,8 +51,10 @@ def collect_results(benchmark_data, no_orchestrator=False):
 
     for index, item in enumerate(benchmark_data):
         print("Processing item:", index + 1, "of", len(benchmark_data))
-        input, expected = item["input"], expected = item["expected"]
-        output = fetch_agent_output(input, expected, no_orchestrator=no_orchestrator)
+        item_input, expected = item["input"], item["expected"]
+        output = fetch_agent_output(
+            item_input, expected, no_orchestrator=no_orchestrator
+        )
         item["output"] = output
 
     benchmark_results = {
@@ -74,10 +79,15 @@ def fetch_agent_output(input, expected, no_orchestrator=False):
         if no_orchestrator:
             payload["orchestrator_choice"] = expected["orchestrator_choice"]
 
+        data = json.dumps(payload)
+
         response = requests.post(
             f"{server}/yac/benchmark",
-            headers={"Content-Type": "application/json"},
-            data=json.dumps(payload),
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": "Bearer fake_token",
+            },
+            data=data,
         )
 
         if not response.ok:

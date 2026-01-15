@@ -38,7 +38,7 @@ agent = UDIAgent(
     model_name=MODEL_NAME,
     gpt_model_name="gpt-4.1",
     vllm_server_url="http://localhost",
-    vllm_server_port=8080,
+    vllm_server_port=55001,
 )
 
 # @app.get("/test1")
