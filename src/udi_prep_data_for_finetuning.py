@@ -13,8 +13,11 @@ def load_dqvis():
     dataset = load_dataset(f"HIDIVE/DQVis")
     df = dataset['train'].to_pandas()
     # size: (1075190, 15)
+    # print(df.shape)
     df = subsample(df, group_size=25)
     print(df.shape)
+
+    # exit(0)
 
     # download the dataset schema list
     dataset_schemas = hf_hub_download(
@@ -43,7 +46,7 @@ def load_dqvis():
         df,
         dataset_schemas,
         grammar_schema,
-        output_path='/n/netscratch/mzitnik_lab/Lab/dlange/data/dqvis_training',
+        output_path='/n/netscratch/mzitnik_lab/Lab/dlange/data/dqvis_training_full',
         huggingface_path='',
         push_to_hub=False,
         pretty=False
