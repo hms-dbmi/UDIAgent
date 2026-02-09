@@ -46,7 +46,8 @@ def load_dqvis():
         df,
         dataset_schemas,
         grammar_schema,
-        output_path='/n/netscratch/mzitnik_lab/Lab/dlange/data/dqvis_training_full',
+        # output_path='/n/netscratch/mzitnik_lab/Lab/dlange/data/dqvis_training_full',
+        output_path='/n/holylfs06/LABS/mzitnik_lab/Users/dlange/data/dqvis_training_full',
         huggingface_path='',
         push_to_hub=False,
         pretty=False
