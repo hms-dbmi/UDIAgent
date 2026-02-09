@@ -108,9 +108,9 @@ def format_for_finetuning(df, dataset_schema_list, grammar_schema, output_path, 
     # train_size = len(conversations) - 10
     # train_conversations = conversations[:train_size]
     # test_conversations = conversations[train_size:]
-    train_conversations, test_conversations = train_test_split(conversations, group_size=25)
+    train_conversations, test_conversations, train_indices, test_indices = train_test_split(conversations, group_size=25)
     print(f"train conversations: {len(train_conversations)}, test conversations: {len(test_conversations)}")
-    save_huggingface_dataset(new_dataset=train_conversations, test_dataset=test_conversations, dataset_path=output_path, push_to_hub=push_to_hub)
+    save_huggingface_dataset(new_dataset=train_conversations, test_dataset=test_conversations, train_indices=train_indices, test_indices=test_indices, dataset_path=output_path, push_to_hub=push_to_hub)
 
     return
 
@@ -119,27 +119,35 @@ def train_test_split(conversations, group_size=25):
     '''
     First pull out one for every group of size group_size to create the test set, and use the rest for training.
     Next, shuffle the order of the training set conversations to ensure a good mix of examples.
+    Returns (train_conversations, test_conversations, train_indices, test_indices)
+    where indices are the original DQVis row positions.
     '''
     # Create group IDs: e.g. 0 for rows 0-24, 1 for rows 25-49, etc.
     group_ids = np.arange(len(conversations)) // group_size
-    
+
     # Randomly select one index per group for the test set
-    test_indices = set()
+    test_idx_set = set()
     for group_id in np.unique(group_ids):
         # Get all indices in this group
         group_mask = group_ids == group_id
         group_indices = np.where(group_mask)[0]
         # Randomly select one index from this group
-        test_indices.add(np.random.choice(group_indices))
-    
+        test_idx_set.add(np.random.choice(group_indices))
+
     # Split into train and test based on selected indices
+    test_indices = sorted(test_idx_set)
     test_conversations = [conversations[i] for i in test_indices]
-    train_conversations = [conversations[i] for i in range(len(conversations)) if i not in test_indices]
-    
-    # Shuffle the training conversations to ensure a good mix of examples
-    random.shuffle(train_conversations)
-    
-    return train_conversations, test_conversations
+    train_indices = [i for i in range(len(conversations)) if i not in test_idx_set]
+    train_conversations = [conversations[i] for i in train_indices]
+
+    # Shuffle training conversations and their indices together
+    combined = list(zip(train_conversations, train_indices))
+    random.shuffle(combined)
+    train_conversations, train_indices = zip(*combined)
+    train_conversations = list(train_conversations)
+    train_indices = list(train_indices)
+
+    return train_conversations, test_conversations, train_indices, test_indices
 
 def get_reduced_dataset_schema(full_schema, row, entity_reduction_rate=0.25, field_reduction_rate=0.1):
     """
@@ -228,33 +236,39 @@ def create_assistant_response(spec, grammar_schema):
         "tools": json.dumps(None)
     }
 
-def save_huggingface_dataset(dataset_path, new_dataset=None, test_dataset=None, push_to_hub=False):
+def save_huggingface_dataset(dataset_path, new_dataset=None, test_dataset=None, train_indices=None, test_indices=None, push_to_hub=False):
     """
     Save the dataset in a format recognized by Hugging Face's datasets library.
-
 
     Args:
         new_dataset (list): List of training examples.
         test_dataset (list): List of test examples.
+        train_indices (list): Original DQVis row indices for training examples.
+        test_indices (list): Original DQVis row indices for test examples.
         dataset_path (str): Path to save the dataset.
     """
     print()
     print("saving to huggingface format")
-    # dataset_path = os.path.join(dataset_path, f"chunk_{chunk}")
     os.makedirs(dataset_path, exist_ok=True)
 
     if new_dataset is not None:
-        print("creating test dataset")
+        print("creating train dataset")
         train_path = os.path.join(dataset_path, "train")
         os.makedirs(train_path, exist_ok=True)
-        train_dataset = Dataset.from_dict({"messages": new_dataset})
+        train_data = {"messages": new_dataset}
+        if train_indices is not None:
+            train_data["original_dqvis_index"] = train_indices
+        train_dataset = Dataset.from_dict(train_data)
         print("done")
         train_dataset.save_to_disk(train_path)
 
     if test_dataset is not None:
         test_path = os.path.join(dataset_path, "test")
         os.makedirs(test_path, exist_ok=True)
-        test_dataset = Dataset.from_dict({"messages": test_dataset})
+        test_data = {"messages": test_dataset}
+        if test_indices is not None:
+            test_data["original_dqvis_index"] = test_indices
+        test_dataset = Dataset.from_dict(test_data)
         test_dataset.save_to_disk(test_path)
 
     print('creating dataset_dict')
