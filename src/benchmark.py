@@ -47,7 +47,10 @@ def fetch_agent_output(input):
     try:
         response = requests.post(
             f"{server}/yac/benchmark",
-            headers={"Content-Type": "application/json"},
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": "Bearer faketoken"
+            },
             data=json.dumps(input)
         )
 
