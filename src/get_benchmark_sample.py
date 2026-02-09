@@ -17,6 +17,7 @@ grouped = df.groupby(['query_template', 'spec_template', 'dataset_schema'])
 
 # randomly sample one row from each group
 # set random_state for reproducibility
+df['_original_idx'] = df.index
 sampled_df = grouped.apply(lambda x: x.sample(1, random_state=97930), include_groups=False).reset_index()
 print(sampled_df)
 
@@ -62,6 +63,7 @@ for index, row in sampled_df.iterrows():
                     "content": row['query']
                 }
             ],
+            "dqvis_index": int(row['_original_idx']),
             "dataSchema": data_package_map.get(row['dataset_schema'], ""),
             "dataDomains":  data_domain_map.get(row['dataset_schema'], ""),
         },
