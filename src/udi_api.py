@@ -5,6 +5,7 @@ from pydantic import BaseModel
 from fastapi import FastAPI, Header, HTTPException, Depends
 from fastapi.responses import JSONResponse
 from udi_agent import UDIAgent
+# from src.udi_agent import UDIAgent
 from fastapi.middleware.cors import CORSMiddleware
 import copy
 
@@ -15,6 +16,7 @@ load_dotenv()  # automatically loads from .env
 SECRET_KEY = os.getenv("JWT_SECRET_KEY")
 ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
 MODEL_NAME = os.getenv("UDI_MODEL_NAME")
+INSECURE_DEV_MODE = os.getenv("INSECURE_DEV_MODE", "0") == "1"
 
 app = FastAPI()
 
@@ -35,6 +37,8 @@ agent = UDIAgent(
     # model_name="agenticx/UDI-VIS-Beta-v0-Llama-3.1-8B",
     model_name=MODEL_NAME,
     gpt_model_name="gpt-4.1",
+    # gpt_model_name="gpt-4.1-nano",
+    # gpt_model_name="gpt-5-nano",
     vllm_server_url="http://localhost",
     vllm_server_port=8080
 )
@@ -52,6 +56,9 @@ agent = UDIAgent(
 #     return { "response": response }
 
 def verify_jwt(authorization: str = Header(...)):
+    if INSECURE_DEV_MODE:
+        # skip verification in dev mode
+        return {"dev_mode": True}
     if not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Invalid authorization header")
     
