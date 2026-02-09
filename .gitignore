@@ -1,4 +1,5 @@
 archive
+out/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -147,3 +148,6 @@ data_collection/kg
 data_collection/old*
 data_collection/data_untill_1112
 data_collection/data_tmp
+
+
+uv.lock

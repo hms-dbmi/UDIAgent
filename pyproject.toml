@@ -1,3 +1,14 @@
-[build-system]
-requires = ["setuptools", "wheel"]
-build-backend = "setuptools.build_meta"
+[project]
+name = "udiagent"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "fastapi[standard]>=0.128.0",
+    "jsonschema>=4.26.0",
+    "openai>=2.15.0",
+    "python-jose>=3.5.0",
+    "requests>=2.32.5",
+    "transformers>=4.57.5",
+]
