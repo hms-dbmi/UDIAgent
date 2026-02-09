@@ -1,8 +1,16 @@
+to run training
+
+
+`export HF_TOKEN=generated_token_string`
+`cd /n/home05/dlange/ARPAHAgent/alignment-handbook`
+`sbatch llm4_r`
+
 
 if h100 queue is long can use a100
 ```
 salloc -p kempner --account=kempner_mzitnik_lab -c 16 --mem=200G --gres=gpu:1 -t 0-14:00 -C a100
 ```
+
 
 My steps for running inference:
 ```
@@ -12,6 +20,8 @@ module load ncf/1.0.0-fasrc01
 module load miniconda3/py39_4.11.0-linux_x64-ncf
 conda activate udienv
 vllm serve /n/netscratch/mzitnik_lab/Lab/dlange/data/vis-v2/data/hidive/UDI-VIS-Beta-v2-Llama-3.1-8B --gpu-memory-utilization 0.85 --port 8080 --host 127.0.0.1
+vllm serve HIDIVE/UDI-VIS-Beta-v2-Llama-3.1-8B --gpu-memory-utilization 0.85 --port 8080 --host 127.0.0.1
+vllm serve meta-llama/Llama-3.1-8B-Instruct --gpu-memory-utilization 0.85 --port 8080 --host 127.0.0.1
 ```
 
 detach tmux: control b, d
@@ -91,3 +101,20 @@ open localhost:9090 in browser.
 
 Errors I've run into:
 - https://github.com/vllm-project/vllm/issues/13815
+
+
+To check queue if requesting resources is taking some time.
+
+to check predicted start time of requested job:
+
+scontrol show job <jobid> | grep StartTime
+
+
+to get list of jobs in queue:
+squeue --sort=-p -p kempner -t PD   -o "%.18i %.8u %.2t %.10M %.10l %.4C %.10m %.20b %.8Q %.8P %R"
+squeue --sort=-p -p kempner_h100 -t PD   -o "%.18i %.8u %.2t %.10M %.10l %.4C %.10m %.20b %.8Q %.8P %R"
+squeue --sort=-p -p kempner_requeue -t PD   -o "%.18i %.8u %.2t %.10M %.10l %.4C %.10m %.20b %.8Q %.8P %R"
+
+
+<!-- salloc I used to requeset resource for data transformation -->
+salloc -p kempner --account=kempner_mzitnik_lab -c 16 --mem=700G --gres=gpu:2 -t 0-04:00 -C a100
