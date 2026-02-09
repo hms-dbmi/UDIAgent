@@ -14,7 +14,7 @@ def load_dqvis():
     df = dataset['train'].to_pandas()
     # size: (1075190, 15)
     # print(df.shape)
-    df = subsample(df, group_size=25)
+    # df = subsample(df, group_size=25)
     print(df.shape)
 
     # exit(0)
@@ -105,12 +105,41 @@ def format_for_finetuning(df, dataset_schema_list, grammar_schema, output_path, 
         conversations.append([system_prompt, user_query, assistant_response])
 
     # split converstations into train and test sets
-    train_size = len(conversations) - 10
-    train_conversations = conversations[:train_size]
-    test_conversations = conversations[train_size:]
+    # train_size = len(conversations) - 10
+    # train_conversations = conversations[:train_size]
+    # test_conversations = conversations[train_size:]
+    train_conversations, test_conversations = train_test_split(conversations, group_size=25)
+    print(f"train conversations: {len(train_conversations)}, test conversations: {len(test_conversations)}")
     save_huggingface_dataset(new_dataset=train_conversations, test_dataset=test_conversations, dataset_path=output_path, push_to_hub=push_to_hub)
 
     return
+
+
+def train_test_split(conversations, group_size=25):
+    '''
+    First pull out one for every group of size group_size to create the test set, and use the rest for training.
+    Next, shuffle the order of the training set conversations to ensure a good mix of examples.
+    '''
+    # Create group IDs: e.g. 0 for rows 0-24, 1 for rows 25-49, etc.
+    group_ids = np.arange(len(conversations)) // group_size
+    
+    # Randomly select one index per group for the test set
+    test_indices = set()
+    for group_id in np.unique(group_ids):
+        # Get all indices in this group
+        group_mask = group_ids == group_id
+        group_indices = np.where(group_mask)[0]
+        # Randomly select one index from this group
+        test_indices.add(np.random.choice(group_indices))
+    
+    # Split into train and test based on selected indices
+    test_conversations = [conversations[i] for i in test_indices]
+    train_conversations = [conversations[i] for i in range(len(conversations)) if i not in test_indices]
+    
+    # Shuffle the training conversations to ensure a good mix of examples
+    random.shuffle(train_conversations)
+    
+    return train_conversations, test_conversations
 
 def get_reduced_dataset_schema(full_schema, row, entity_reduction_rate=0.25, field_reduction_rate=0.1):
     """
