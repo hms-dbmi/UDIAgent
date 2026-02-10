@@ -32,6 +32,7 @@ MODEL="${2:-/n/netscratch/mzitnik_lab/Lab/dlange/data/vis-v2/data/hidive/UDI-VIS
 
 module load ncf/1.0.0-fasrc01
 module load miniconda3/py39_4.11.0-linux_x64-ncf
+source $(conda info --base)/etc/profile.d/conda.sh
 conda activate udienv
 
 echo "Running on host: $(hostname)"
