@@ -16,6 +16,9 @@ import uuid
 from jsonschema import validate, ValidationError
 import copy
 import os
+import threading
+import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 PORT = 8007
 timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
@@ -25,11 +28,11 @@ ANALYSIS_FILENAME = "./out/" + timestamp + "/benchmark_analysis.json"
 run_id = str(uuid.uuid4())
 
 
-def run_benchmark(benchmark_file, no_orchestrator=False):
+def run_benchmark(benchmark_file, no_orchestrator=False, max_workers=5, resume_path=None):
     with open(benchmark_file, "r") as f:
         benchmark_data = json.load(f)
 
-    results = collect_results(benchmark_data, no_orchestrator=no_orchestrator)
+    results = collect_results(benchmark_data, no_orchestrator=no_orchestrator, max_workers=max_workers, resume_path=resume_path)
     analysis = analyze_results(results)
     return
 
@@ -45,17 +48,24 @@ def save_data_to_file(data, path):
         print(f"Failed to save data to {path}: {e}")
 
 
-def collect_results(benchmark_data, no_orchestrator=False):
+def collect_results(benchmark_data, no_orchestrator=False, max_workers=5, resume_path=None):
+    # Load existing results if resuming
+    if resume_path:
+        with open(resume_path) as f:
+            existing = json.load(f)
+        for i, item in enumerate(existing["results"]):
+            if "output" in item:
+                benchmark_data[i]["output"] = item["output"]
+        skipped = sum(1 for item in benchmark_data if "output" in item)
+        print(f"Resumed from {resume_path}: {skipped}/{len(benchmark_data)} items already completed")
+
     # get free text description of benchmark run from user input
     description = input("Enter a description for this benchmark run: ")
 
-    for index, item in enumerate(benchmark_data):
-        print("Processing item:", index + 1, "of", len(benchmark_data))
-        item_input, expected = item["input"], item["expected"]
-        output = fetch_agent_output(
-            item_input, expected, no_orchestrator=no_orchestrator
-        )
-        item["output"] = output
+    lock = threading.Lock()
+    completed = 0
+    total = len(benchmark_data)
+    start_time = time.time()
 
     benchmark_results = {
         "metadata": {
@@ -67,6 +77,26 @@ def collect_results(benchmark_data, no_orchestrator=False):
         "results": benchmark_data,
     }
 
+    def process_item(index, item):
+        nonlocal completed
+        if "output" in item:  # already completed (resume)
+            with lock:
+                completed += 1
+            return
+        output = fetch_agent_output(item["input"], item["expected"], no_orchestrator=no_orchestrator)
+        item["output"] = output
+        with lock:
+            completed += 1
+            elapsed = time.time() - start_time
+            print(f"Completed {completed}/{total} ({elapsed:.1f}s elapsed)")
+            save_data_to_file(benchmark_results, RESULT_FILENAME)
+
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        futures = [executor.submit(process_item, i, item) for i, item in enumerate(benchmark_data)]
+        for future in as_completed(futures):
+            future.result()  # raise any exceptions
+
+    # Final save
     save_data_to_file(benchmark_results, RESULT_FILENAME)
     return benchmark_results
 
@@ -88,6 +118,7 @@ def fetch_agent_output(input, expected, no_orchestrator=False):
                 "Authorization": "Bearer fake_token",
             },
             data=data,
+            timeout=120,
         )
 
         if not response.ok:
@@ -531,17 +562,25 @@ if __name__ == "__main__":
         help="If set, the benchmark will bypass the orchestrator step and directly call the correct tools.",
     )
 
-    # parser.add_argument(
-    #     "--out",
-    #     default="./data/benchmark_results.json",
-    #     help="Output path to write collected results (defaults: ./data/benchmark_results.json)."
-    # )
+    parser.add_argument(
+        "--workers",
+        type=int,
+        default=5,
+        help="Number of concurrent workers for benchmark collection (default: 5).",
+    )
+
+    parser.add_argument(
+        "--resume",
+        type=str,
+        default=None,
+        help="Path to a partial results JSON file to resume from.",
+    )
 
     args = parser.parse_args()
 
     if args.action == "full":
         # run_benchmark will run collection and analysis internally
-        run_benchmark(args.path, args.no_orchestrator)
+        run_benchmark(args.path, args.no_orchestrator, max_workers=args.workers, resume_path=args.resume)
         sys.exit(0)
 
     if args.action == "collect":
@@ -551,7 +590,7 @@ if __name__ == "__main__":
         except Exception as e:
             print(f"Failed to read benchmark file {args.path}: {e}")
             sys.exit(1)
-        collect_results(benchmark_data, args.no_orchestrator)
+        collect_results(benchmark_data, args.no_orchestrator, max_workers=args.workers, resume_path=args.resume)
 
         sys.exit(0)
 
