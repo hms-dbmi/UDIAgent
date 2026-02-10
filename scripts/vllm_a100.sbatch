@@ -1,4 +1,23 @@
 #!/bin/bash
+#
+# Serve a vLLM model on an A100 GPU.
+# A100s are slightly slower than H100s but typically have a shorter queue.
+# If speed is a priority and the queue is short, consider using vllm_h100.sbatch instead.
+#
+# Usage:
+#   sbatch scripts/vllm_a100.sbatch [HOURS] [PORT] [MODEL]
+#
+# Arguments:
+#   HOURS  - Time limit in hours, 1-23 (default: 3)
+#   PORT   - Port for the vLLM server (default: 8080)
+#   MODEL  - Model path or HuggingFace ID (default: UDI-VIS-Beta-v2-Llama-3.1-8B)
+#
+# Examples:
+#   sbatch scripts/vllm_a100.sbatch
+#   sbatch scripts/vllm_a100.sbatch 8
+#   sbatch scripts/vllm_a100.sbatch 8 8081
+#   sbatch scripts/vllm_a100.sbatch 8 8081 HIDIVE/UDI-VIS-Beta-v2-Llama-3.1-8B
+#
 #SBATCH --job-name=vllm-a100
 #SBATCH --partition=kempner
 #SBATCH --account=kempner_mzitnik_lab
