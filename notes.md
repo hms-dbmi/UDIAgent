@@ -1,3 +1,6 @@
+To run inference check scripts folder.
+e.g. `sbatch ./scripts/vllm_a100.sbatch`
+
 to run training
 
 `export HF_TOKEN=generated_token_string`
