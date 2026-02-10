@@ -102,13 +102,13 @@ def sample_from_dqvis(data_package_map, data_domain_map):
     return test_case_list
 
 
-def from_training_test(training_data_path, indices, data_package_map, data_domain_map):
+def from_training_test(training_data_path, data_package_map, data_domain_map):
     """Build benchmark cases from specific test indices in dqvis_training_full."""
     data = load_from_disk(training_data_path)
     dqvis = load_dataset(REPO_ID)['train']
 
     test_case_list = []
-    for i in indices:
+    for i in range(len(data['test'])):
         test_row = data['test'][i]
         dqvis_index = test_row['original_dqvis_index']
         dqvis_row = dqvis[dqvis_index]
@@ -128,8 +128,6 @@ def main():
     parser = argparse.ArgumentParser(description="Generate benchmark test cases from DQVis data")
     parser.add_argument('--from-test', metavar='PATH',
                         help='Path to dqvis_training_full dataset. Use with --indices to select specific test rows.')
-    parser.add_argument('--indices', type=int, nargs='+',
-                        help='Test set indices to include (used with --from-test)')
     parser.add_argument('-o', '--output', default=OUTPUT_PATH,
                         help=f'Output path (default: {OUTPUT_PATH})')
     args = parser.parse_args()
@@ -138,9 +136,7 @@ def main():
     data_domain_map = load_data_domains()
 
     if args.from_test:
-        if not args.indices:
-            parser.error('--indices is required when using --from-test')
-        test_case_list = from_training_test(args.from_test, args.indices, data_package_map, data_domain_map)
+        test_case_list = from_training_test(args.from_test, data_package_map, data_domain_map)
     else:
         test_case_list = sample_from_dqvis(data_package_map, data_domain_map)
 
