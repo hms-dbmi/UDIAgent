@@ -21,6 +21,7 @@ import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 PORT = 8007
+JSONL_SCHEMAS_FILENAME = "schemas.json"
 timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 RESULT_FILENAME = "./out/" + timestamp + "/benchmark_results.json"
 ANALYSIS_FILENAME = "./out/" + timestamp + "/benchmark_analysis.json"
@@ -28,9 +29,52 @@ ANALYSIS_FILENAME = "./out/" + timestamp + "/benchmark_analysis.json"
 run_id = str(uuid.uuid4())
 
 
-def run_benchmark(benchmark_file, no_orchestrator=False, max_workers=5, resume_path=None):
-    with open(benchmark_file, "r") as f:
-        benchmark_data = json.load(f)
+def load_benchmark_data(path, limit=None):
+    """Load benchmark data from .json or .jsonl files.
+
+    For .jsonl files, loads the sibling schemas.json and injects
+    dataSchema/dataDomains back into each item so downstream code
+    sees the same structure as the original JSON format.
+    """
+    if path.endswith(".jsonl"):
+        return _load_benchmark_jsonl(path, limit=limit)
+    else:
+        with open(path, "r") as f:
+            data = json.load(f)
+        if limit:
+            data = data[:limit]
+        return data
+
+
+def _load_benchmark_jsonl(path, limit=None):
+    """Load a compact JSONL benchmark file, reconstituting shared schemas."""
+    schemas_path = os.path.join(os.path.dirname(path), JSONL_SCHEMAS_FILENAME)
+    with open(schemas_path, "r") as f:
+        schemas = json.load(f)
+
+    # Pre-load schema strings so all items share the same string objects in memory
+    schema_cache = {}
+    for key, val in schemas.items():
+        schema_cache[key] = (val["dataSchema"], val["dataDomains"])
+
+    items = []
+    with open(path, "r") as f:
+        for line in f:
+            if limit and len(items) >= limit:
+                break
+            item = json.loads(line)
+            dataset_key = item["input"].pop("dataset_key")
+            ds, dd = schema_cache[dataset_key]
+            item["input"]["dataSchema"] = ds
+            item["input"]["dataDomains"] = dd
+            items.append(item)
+
+    print(f"Loaded {len(items)} items from {path}")
+    return items
+
+
+def run_benchmark(benchmark_file, no_orchestrator=False, max_workers=5, resume_path=None, limit=None):
+    benchmark_data = load_benchmark_data(benchmark_file, limit=limit)
 
     results = collect_results(benchmark_data, no_orchestrator=no_orchestrator, max_workers=max_workers, resume_path=resume_path)
     analysis = analyze_results(results)
@@ -576,17 +620,23 @@ if __name__ == "__main__":
         help="Path to a partial results JSON file to resume from.",
     )
 
+    parser.add_argument(
+        "--limit",
+        type=int,
+        default=None,
+        help="Cap the number of benchmark items to load.",
+    )
+
     args = parser.parse_args()
 
     if args.action == "full":
         # run_benchmark will run collection and analysis internally
-        run_benchmark(args.path, args.no_orchestrator, max_workers=args.workers, resume_path=args.resume)
+        run_benchmark(args.path, args.no_orchestrator, max_workers=args.workers, resume_path=args.resume, limit=args.limit)
         sys.exit(0)
 
     if args.action == "collect":
         try:
-            with open(args.path, "r") as f:
-                benchmark_data = json.load(f)
+            benchmark_data = load_benchmark_data(args.path, limit=args.limit)
         except Exception as e:
             print(f"Failed to read benchmark file {args.path}: {e}")
             sys.exit(1)
