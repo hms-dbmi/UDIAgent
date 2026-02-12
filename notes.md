@@ -31,10 +31,10 @@ detach tmux: control b, d
 new way, run on personal computer
 
 Dev:
-uv run fastapi dev ./src/udi_api.py --port 55001
+uv run fastapi dev ./src/udi_api.py --port 8007
 
 Prod:
-uv run fastapi run ./src/udi_api.py --port 55001
+uv run fastapi run ./src/udi_api.py --port 8007
 
 Old way, run on kempner
 
