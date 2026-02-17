@@ -73,10 +73,18 @@ def _load_benchmark_jsonl(path, limit=None):
     return items
 
 
-def run_benchmark(benchmark_file, no_orchestrator=False, max_workers=5, resume_path=None, limit=None):
+def run_benchmark(
+    benchmark_file, no_orchestrator=False, max_workers=5, resume_path=None, limit=None
+):
     benchmark_data = load_benchmark_data(benchmark_file, limit=limit)
 
-    results = collect_results(benchmark_data, no_orchestrator=no_orchestrator, max_workers=max_workers, resume_path=resume_path)
+    results = collect_results(
+        benchmark_data,
+        no_orchestrator=no_orchestrator,
+        max_workers=max_workers,
+        resume_path=resume_path,
+        benchmark_file=benchmark_file,
+    )
     analysis = analyze_results(results)
     return
 
@@ -92,7 +100,13 @@ def save_data_to_file(data, path):
         print(f"Failed to save data to {path}: {e}")
 
 
-def collect_results(benchmark_data, no_orchestrator=False, max_workers=5, resume_path=None):
+def collect_results(
+    benchmark_data,
+    no_orchestrator=False,
+    max_workers=5,
+    resume_path=None,
+    benchmark_file=None,
+):
     # Load existing results if resuming
     if resume_path:
         with open(resume_path) as f:
@@ -101,7 +115,9 @@ def collect_results(benchmark_data, no_orchestrator=False, max_workers=5, resume
             if "output" in item:
                 benchmark_data[i]["output"] = item["output"]
         skipped = sum(1 for item in benchmark_data if "output" in item)
-        print(f"Resumed from {resume_path}: {skipped}/{len(benchmark_data)} items already completed")
+        print(
+            f"Resumed from {resume_path}: {skipped}/{len(benchmark_data)} items already completed"
+        )
 
     # get free text description of benchmark run from user input
     description = input("Enter a description for this benchmark run: ")
@@ -117,6 +133,7 @@ def collect_results(benchmark_data, no_orchestrator=False, max_workers=5, resume
             "timestamp": timestamp,
             "description": description,
             "no_orchestrator": no_orchestrator,
+            "data_path": benchmark_file,
         },
         "results": benchmark_data,
     }
@@ -127,7 +144,9 @@ def collect_results(benchmark_data, no_orchestrator=False, max_workers=5, resume
             with lock:
                 completed += 1
             return
-        output = fetch_agent_output(item["input"], item["expected"], no_orchestrator=no_orchestrator)
+        output = fetch_agent_output(
+            item["input"], item["expected"], no_orchestrator=no_orchestrator
+        )
         item["output"] = output
         with lock:
             completed += 1
@@ -136,7 +155,10 @@ def collect_results(benchmark_data, no_orchestrator=False, max_workers=5, resume
             save_data_to_file(benchmark_results, RESULT_FILENAME)
 
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
-        futures = [executor.submit(process_item, i, item) for i, item in enumerate(benchmark_data)]
+        futures = [
+            executor.submit(process_item, i, item)
+            for i, item in enumerate(benchmark_data)
+        ]
         for future in as_completed(futures):
             future.result()  # raise any exceptions
 
@@ -631,7 +653,13 @@ if __name__ == "__main__":
 
     if args.action == "full":
         # run_benchmark will run collection and analysis internally
-        run_benchmark(args.path, args.no_orchestrator, max_workers=args.workers, resume_path=args.resume, limit=args.limit)
+        run_benchmark(
+            args.path,
+            args.no_orchestrator,
+            max_workers=args.workers,
+            resume_path=args.resume,
+            limit=args.limit,
+        )
         sys.exit(0)
 
     if args.action == "collect":
@@ -640,7 +668,13 @@ if __name__ == "__main__":
         except Exception as e:
             print(f"Failed to read benchmark file {args.path}: {e}")
             sys.exit(1)
-        collect_results(benchmark_data, args.no_orchestrator, max_workers=args.workers, resume_path=args.resume)
+        collect_results(
+            benchmark_data,
+            args.no_orchestrator,
+            max_workers=args.workers,
+            resume_path=args.resume,
+            benchmark_file=args.path,
+        )
 
         sys.exit(0)
 
