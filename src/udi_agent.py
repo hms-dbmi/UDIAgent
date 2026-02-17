@@ -24,8 +24,10 @@ class UDIAgent:
         gpt_model_name: str,
         vllm_server_url=None,
         vllm_server_port=None,
+        tokenizer_name: str = None,
     ):
         self.model_name = model_name
+        self.tokenizer_name = tokenizer_name or model_name
         self.gpt_model_name = gpt_model_name
         if vllm_server_port is not None and vllm_server_url is not None:
             self.vllm_server_url = vllm_server_url
@@ -42,6 +44,11 @@ class UDIAgent:
         )
 
         self.gpt_model = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
+        # Cache tokenizer + chat template once (avoid reloading per request)
+        tokenizer = AutoTokenizer.from_pretrained(self.tokenizer_name)
+        self.tokenizer = tokenizer
+        self.chat_template = Template(tokenizer.chat_template)
 
     # def init_internal_models(self):
     #     self.llm = LLM(
@@ -157,10 +164,7 @@ class UDIAgent:
     def completions_guided_json(
         self, messages: list[dict], tools: list[dict], json_schema: str, n=1
     ):
-        tokenizer = AutoTokenizer.from_pretrained(self.model_name)
-        chat_template = Template(tokenizer.chat_template)
-
-        prompt = chat_template.render(
+        prompt = self.chat_template.render(
             messages=messages, tools=tools, add_generation_prompt=True
         )
 
@@ -258,9 +262,6 @@ class UDIAgent:
     #     return response
 
     def completions(self, messages: list[dict], tools: list[dict]):
-        tokenizer = AutoTokenizer.from_pretrained(self.model_name)
-        chat_template = Template(tokenizer.chat_template)
-
         print(f"Messages: {messages}")
 
         # Debugging, remove all the tool_calls from the messages
@@ -269,7 +270,7 @@ class UDIAgent:
             if "tool_calls" in message:
                 del message["tool_calls"]
 
-        prompt = chat_template.render(
+        prompt = self.chat_template.render(
             messages=messages, tools=tools, add_generation_prompt=True
         )
 

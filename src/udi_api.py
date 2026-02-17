@@ -17,6 +17,7 @@ load_dotenv()  # automatically loads from .env
 SECRET_KEY = os.getenv("JWT_SECRET_KEY")
 ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
 MODEL_NAME = os.getenv("UDI_MODEL_NAME")
+TOKENIZER_NAME = os.getenv("UDI_TOKENIZER_NAME", MODEL_NAME)
 INSECURE_DEV_MODE = os.getenv("INSECURE_DEV_MODE", "0") == "1"
 
 app = FastAPI()
@@ -42,6 +43,7 @@ agent = UDIAgent(
     # gpt_model_name="gpt-5-nano",
     vllm_server_url="http://localhost",
     vllm_server_port=55001,
+    tokenizer_name=TOKENIZER_NAME,
 )
 
 # @app.get("/test1")
