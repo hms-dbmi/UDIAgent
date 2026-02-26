@@ -149,11 +149,19 @@ def generate_vis_spec(agent, messages, data_schema, grammar, config=None):
         gen_messages.append({"role": "assistant", "content": feedback_content})
         correction_msg = (
             "The output failed schema validation against the UDI Grammar specification.\n\n"
-            "UDI Grammar requires these top-level keys:\n"
-            '- "source": array of {"name": string, "source": string (CSV path)}\n'
-            '- "transformation": array of operations (groupby, rollup, join, filter, orderby, derive, binby)\n'
-            '- "representation": {"mark": string (bar|line|point|area|arc|rect|text|geometry), '
-            '"mapping": array of {"encoding": string, "field": string, "type": "quantitative"|"nominal"|"ordinal"|"temporal"}}\n\n'
+            "Here is an example of a valid UDI Grammar spec:\n"
+            '{"source": [{"name": "sales", "source": "./data/sales.csv"}], '
+            '"transformation": [{"groupby": ["region"]}, '
+            '{"rollup": {"total": {"op": "sum", "field": "amount"}}}], '
+            '"representation": {"mark": "bar", '
+            '"mapping": [{"encoding": "x", "field": "region", "type": "nominal"}, '
+            '{"encoding": "y", "field": "total", "type": "quantitative"}]}}\n\n'
+            "Key rules:\n"
+            '- source: array of {"name": string, "source": string}\n'
+            '- transformation: each item uses the operation name as key, e.g. {"groupby": [...]}, '
+            '{"rollup": {...}}, {"join": {"on": [...]}, "in": [...], "out": string}\n'
+            '- representation: {"mark": string, "mapping": array of '
+            '{"encoding": string, "field": string, "type": string}}\n\n'
             f"Validation errors: {'; '.join(errors)}\n\n"
             "Please regenerate the spec as valid UDI Grammar JSON."
         )
