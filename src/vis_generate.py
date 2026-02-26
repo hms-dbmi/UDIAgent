@@ -147,13 +147,17 @@ def generate_vis_spec(agent, messages, data_schema, grammar, config=None):
     while errors and corrections < max_corrections:
         feedback_content = spec_str if isinstance(spec_str, str) else json.dumps(spec_str)
         gen_messages.append({"role": "assistant", "content": feedback_content})
-        gen_messages.append({
-            "role": "user",
-            "content": (
-                f"The output failed validation: {'; '.join(errors)}. "
-                "Please fix the spec."
-            ),
-        })
+        correction_msg = (
+            "The output failed schema validation against the UDI Grammar specification.\n\n"
+            "UDI Grammar requires these top-level keys:\n"
+            '- "source": array of {"name": string, "source": string (CSV path)}\n'
+            '- "transformation": array of operations (groupby, rollup, join, filter, orderby, derive, binby)\n'
+            '- "representation": {"mark": string (bar|line|point|area|arc|rect|text|geometry), '
+            '"mapping": array of {"encoding": string, "field": string, "type": "quantitative"|"nominal"|"ordinal"|"temporal"}}\n\n'
+            f"Validation errors: {'; '.join(errors)}\n\n"
+            "Please regenerate the spec as valid UDI Grammar JSON."
+        )
+        gen_messages.append({"role": "user", "content": correction_msg})
 
         spec_str = _call_llm(agent, gen_messages, grammar, config, backend)
         spec_dict, errors = _parse_and_validate(spec_str, grammar["schema_dict"])
