@@ -1,18 +1,92 @@
 """
-Visualization spec generation with self-correction.
+Markdown-driven skills infrastructure for visualization spec generation.
 
-Generates a UDI Grammar spec via LLM, validates against the JSON schema,
-and re-prompts with error feedback if validation fails.
+Skills are .md files on disk (YAML frontmatter + LLM instructions).
+A code-driven executor runs a plan (ordered list of skill names),
+calling the LLM with each skill's instructions and passing a shared
+context between them.
 """
 
 import json
+import re
+from dataclasses import dataclass, field
 from pathlib import Path
 
 import jsonschema
 
 
 # ---------------------------------------------------------------------------
-# Grammar loading
+# Skill data model
+# ---------------------------------------------------------------------------
+
+@dataclass
+class Skill:
+    """A skill loaded from a markdown file."""
+    name: str
+    description: str
+    instructions: str
+
+
+# ---------------------------------------------------------------------------
+# Skill loader
+# ---------------------------------------------------------------------------
+
+def _parse_frontmatter(text):
+    """Parse YAML frontmatter from a markdown string.
+
+    Returns (metadata dict, body string).
+    """
+    match = re.match(r"^---\s*\n(.*?)\n---\s*\n", text, re.DOTALL)
+    if not match:
+        return {}, text
+
+    body = text[match.end():]
+    metadata = {}
+    for line in match.group(1).splitlines():
+        line = line.strip()
+        if ":" in line:
+            key, _, value = line.partition(":")
+            metadata[key.strip()] = value.strip()
+    return metadata, body
+
+
+def _render_template(instructions, variables):
+    """Replace {{key}} placeholders in instructions with values from variables.
+
+    Supports including arbitrary textual data in skill prompts.
+    Unknown placeholders are left as-is.
+    """
+    def replacer(m):
+        key = m.group(1).strip()
+        if key in variables:
+            return str(variables[key])
+        return m.group(0)
+
+    return re.sub(r"\{\{(.+?)\}\}", replacer, instructions)
+
+
+def load_skills(skills_dir="./src/skills"):
+    """Load all skill .md files from a directory.
+
+    Returns dict mapping skill name -> Skill instance.
+    """
+    skills = {}
+    skills_path = Path(skills_dir)
+    if not skills_path.is_dir():
+        return skills
+
+    for md_file in sorted(skills_path.glob("*.md")):
+        text = md_file.read_text()
+        metadata, body = _parse_frontmatter(text)
+        name = metadata.get("name", md_file.stem)
+        description = metadata.get("description", "")
+        skills[name] = Skill(name=name, description=description, instructions=body)
+
+    return skills
+
+
+# ---------------------------------------------------------------------------
+# Grammar loading (unchanged — config/setup, not a skill)
 # ---------------------------------------------------------------------------
 
 def load_grammar(grammar_name, base_path="./src"):
@@ -41,7 +115,7 @@ def load_grammar(grammar_name, base_path="./src"):
 
 
 # ---------------------------------------------------------------------------
-# Internal helpers
+# LLM call helpers
 # ---------------------------------------------------------------------------
 
 def _call_llm(agent, messages, grammar, config, backend):
@@ -107,11 +181,114 @@ def _parse_and_validate(spec_str, schema_dict):
 
 
 # ---------------------------------------------------------------------------
-# Generation with self-correction
+# Skill executor
+# ---------------------------------------------------------------------------
+
+def _execute_generate(skill, context):
+    """Execute the generate skill: single-shot LLM call."""
+    agent = context["agent"]
+    grammar = context["grammar"]
+    config = context["config"]
+    backend = config.get("backend", "gpt")
+
+    # Render skill instructions with context variables
+    rendered = _render_template(skill.instructions, {
+        "data_schema": context["data_schema"],
+    })
+
+    # Build messages: skill instructions as system prompt + user conversation
+    gen_messages = [{"role": "system", "content": rendered}] + list(context["messages"])
+
+    spec_str = _call_llm(agent, gen_messages, grammar, config, backend)
+    context["spec_str"] = spec_str
+    context["gen_messages"] = gen_messages
+    return context
+
+
+def _execute_validate(skill, context):
+    """Execute the validate skill: parse, validate, and correct via LLM."""
+    agent = context["agent"]
+    grammar = context["grammar"]
+    config = context["config"]
+    backend = config.get("backend", "gpt")
+    max_corrections = config.get("max_corrections", 2)
+    spec_str = context.get("spec_str", "{}")
+    gen_messages = context.get("gen_messages", list(context["messages"]))
+
+    spec_dict, errors = _parse_and_validate(spec_str, grammar["schema_dict"])
+
+    corrections = 0
+    while errors and corrections < max_corrections:
+        # Render the validate skill with current errors as context
+        rendered = _render_template(skill.instructions, {
+            "spec_str": spec_str if isinstance(spec_str, str) else json.dumps(spec_str),
+            "errors": "; ".join(errors),
+        })
+
+        feedback_content = spec_str if isinstance(spec_str, str) else json.dumps(spec_str)
+        gen_messages.append({"role": "assistant", "content": feedback_content})
+        gen_messages.append({"role": "user", "content": rendered})
+
+        spec_str = _call_llm(agent, gen_messages, grammar, config, backend)
+        spec_dict, errors = _parse_and_validate(spec_str, grammar["schema_dict"])
+        corrections += 1
+
+    context["spec_str"] = spec_str
+    context["spec_dict"] = spec_dict
+    context["valid"] = len(errors) == 0
+    context["errors"] = errors
+    context["corrections"] = corrections
+    return context
+
+
+# Map skill names to executor functions.
+# New skills need an entry here only if they require custom execution logic
+# beyond a simple LLM call.
+_SKILL_EXECUTORS = {
+    "generate": _execute_generate,
+    "validate": _execute_validate,
+}
+
+
+def run_skills(plan, context, registry):
+    """Execute skills in plan order, threading context through each.
+
+    Args:
+        plan: list of skill name strings
+        context: shared state dict
+        registry: dict mapping skill names to Skill instances
+
+    Returns: the final context dict
+    """
+    for skill_name in plan:
+        if skill_name not in registry:
+            raise ValueError(f"Unknown skill: {skill_name}")
+        skill = registry[skill_name]
+
+        executor_fn = _SKILL_EXECUTORS.get(skill_name)
+        if executor_fn is not None:
+            context = executor_fn(skill, context)
+        else:
+            # Default executor: render skill instructions as system prompt,
+            # call LLM, store raw result. Works for simple skills that just
+            # need an LLM response without custom parsing.
+            rendered = _render_template(skill.instructions, context)
+            messages = [{"role": "system", "content": rendered}] + list(context["messages"])
+            spec_str = _call_llm(
+                context["agent"], messages, context["grammar"],
+                context["config"], context["config"].get("backend", "gpt"),
+            )
+            context["spec_str"] = spec_str
+
+    return context
+
+
+# ---------------------------------------------------------------------------
+# Public API (backwards compatible)
 # ---------------------------------------------------------------------------
 
 def generate_vis_spec(agent, messages, data_schema, grammar, config=None):
-    """Generate a visualization spec, retrying with error feedback on validation failure.
+    """Generate a visualization spec using the skills pipeline.
 
     Args:
         agent: UDIAgent instance
@@ -121,59 +298,37 @@ def generate_vis_spec(agent, messages, data_schema, grammar, config=None):
         config: optional dict with keys:
             backend: "gpt" | "vllm" (default "gpt")
             n: int (default 1)
-            max_corrections: int (default 2) — number of retry attempts on
-                validation failure. Set to 0 to disable correction.
+            max_corrections: int (default 2)
 
     Returns: {"spec": dict|str, "valid": bool, "errors": list, "corrections": int}
     """
     if config is None:
         config = {}
-    backend = config.get("backend", "gpt")
-    max_corrections = config.get("max_corrections", 2)
 
-    # Build prompt
-    system_content = (
-        f"{grammar['system_prompt']}\n\n"
-        f"The following defines the available datasets:\n{data_schema}"
-    )
-    gen_messages = [{"role": "system", "content": system_content}] + list(messages)
+    # Load skills from disk
+    registry = load_skills()
 
-    # Initial call
-    spec_str = _call_llm(agent, gen_messages, grammar, config, backend)
-    spec_dict, errors = _parse_and_validate(spec_str, grammar["schema_dict"])
+    # Build shared context
+    context = {
+        "agent": agent,
+        "messages": messages,
+        "data_schema": data_schema,
+        "grammar": grammar,
+        "config": config,
+        "spec_str": "{}",
+        "spec_dict": None,
+        "valid": False,
+        "errors": [],
+        "corrections": 0,
+    }
 
-    # Correction loop
-    corrections = 0
-    while errors and corrections < max_corrections:
-        feedback_content = spec_str if isinstance(spec_str, str) else json.dumps(spec_str)
-        gen_messages.append({"role": "assistant", "content": feedback_content})
-        correction_msg = (
-            "The output failed schema validation against the UDI Grammar specification.\n\n"
-            "Here is an example of a valid UDI Grammar spec:\n"
-            '{"source": [{"name": "sales", "source": "./data/sales.csv"}], '
-            '"transformation": [{"groupby": ["region"]}, '
-            '{"rollup": {"total": {"op": "sum", "field": "amount"}}}], '
-            '"representation": {"mark": "bar", '
-            '"mapping": [{"encoding": "x", "field": "region", "type": "nominal"}, '
-            '{"encoding": "y", "field": "total", "type": "quantitative"}]}}\n\n'
-            "Key rules:\n"
-            '- source: array of {"name": string, "source": string}\n'
-            '- transformation: each item uses the operation name as key, e.g. {"groupby": [...]}, '
-            '{"rollup": {...}}, {"join": {"on": [...]}, "in": [...], "out": string}\n'
-            '- representation: {"mark": string, "mapping": array of '
-            '{"encoding": string, "field": string, "type": string}}\n\n'
-            f"Validation errors: {'; '.join(errors)}\n\n"
-            "Please regenerate the spec as valid UDI Grammar JSON."
-        )
-        gen_messages.append({"role": "user", "content": correction_msg})
-
-        spec_str = _call_llm(agent, gen_messages, grammar, config, backend)
-        spec_dict, errors = _parse_and_validate(spec_str, grammar["schema_dict"])
-        corrections += 1
+    # Execute the default plan
+    plan = ["generate", "validate"]
+    context = run_skills(plan, context, registry)
 
     return {
-        "spec": spec_dict if spec_dict is not None else spec_str,
-        "valid": len(errors) == 0,
-        "errors": errors,
-        "corrections": corrections,
+        "spec": context["spec_dict"] if context["spec_dict"] is not None else context["spec_str"],
+        "valid": context["valid"],
+        "errors": context["errors"],
+        "corrections": context["corrections"],
     }
