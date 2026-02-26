@@ -240,6 +240,9 @@ def update_rubric(rubric, key, expected, output, group, points, pass_value=None)
 def check_rubric(expected, output, data_domains):
     rubric = {}
 
+    if output is None:
+        output = {}
+
     # orchestrator makes correct decision (filter/vis/both)
     output_orchestrator_choice = output.get("orchestrator_choice", None)
     expected_orchestrator_choice = expected.get("orchestrator_choice", None)

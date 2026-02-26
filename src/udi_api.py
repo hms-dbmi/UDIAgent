@@ -12,6 +12,8 @@ import copy
 from jose import jwt, JWTError
 from dotenv import load_dotenv
 
+from vis_generate import generate_vis_spec, load_grammar
+
 load_dotenv()  # automatically loads from .env
 
 SECRET_KEY = os.getenv("JWT_SECRET_KEY")
@@ -45,6 +47,11 @@ agent = UDIAgent(
     vllm_server_port=55001,
     tokenizer_name=TOKENIZER_NAME,
 )
+
+USE_VIS_PIPELINE = os.getenv("USE_VIS_PIPELINE", "0") == "1"
+
+if USE_VIS_PIPELINE:
+    _pipeline_grammar = load_grammar("udi")
 
 # @app.get("/test1")
 # def basic_test():
@@ -125,6 +132,7 @@ class YACBenchmarkCompletionRequest(BaseModel):
     dataSchema: str
     dataDomains: str
     orchestrator_choice: str | None = None
+    use_pipeline: bool | None = None  # override USE_VIS_PIPELINE per-request
 
 
 @app.post("/v1/yac/completions")
@@ -157,7 +165,12 @@ def yac_benchmark(
     if calls_to_make == "both" or calls_to_make == "get-subset-of-data":
         tool_calls.extend(function_call_filter(request))
     if calls_to_make == "both" or calls_to_make == "render-visualization":
-        tool_calls.append(function_call_render_visualization(request))
+        # Support per-request pipeline override for A/B benchmarking
+        use_pipeline = request.use_pipeline if request.use_pipeline is not None else USE_VIS_PIPELINE
+        if use_pipeline:
+            tool_calls.append(function_call_render_visualization_pipeline(request))
+        else:
+            tool_calls.append(function_call_render_visualization_legacy(request))
     return {"tool_calls": tool_calls, "orchestrator_choice": calls_to_make}
 
 
@@ -376,7 +389,7 @@ def function_call_filter(request: YACCompletionRequest):
     # return {"name": "FilterData", "arguments": response}
 
 
-def function_call_render_visualization(request: YACCompletionRequest):
+def function_call_render_visualization_legacy(request: YACCompletionRequest):
     f = open("./src/UDIGrammarSchema.json", "r")
     udi_grammar_dict = json.load(f)
     f.close()
@@ -412,6 +425,24 @@ def function_call_render_visualization(request: YACCompletionRequest):
         json_schema=udi_grammar_string,
     )
     return json.loads(response.choices[0].text)
+
+
+def function_call_render_visualization_pipeline(request: YACCompletionRequest):
+    messages = copy.deepcopy(request.messages)
+    strip_tool_calls(messages)
+    result = generate_vis_spec(
+        agent=agent,
+        messages=messages,
+        data_schema=request.dataSchema,
+        grammar=_pipeline_grammar,
+    )
+    return {"name": "RenderVisualization", "arguments": {"spec": result["spec"]}}
+
+
+def function_call_render_visualization(request: YACCompletionRequest):
+    if USE_VIS_PIPELINE:
+        return function_call_render_visualization_pipeline(request)
+    return function_call_render_visualization_legacy(request)
     # return {"name": "RenderVisualization", "arguments": {"spec": spec}}
 
 

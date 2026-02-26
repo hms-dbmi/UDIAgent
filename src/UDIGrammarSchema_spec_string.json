@@ -4,6 +4,7 @@
   "type": "object",
   "properties": {
     "name": {
+      "type": "string",
       "const": "RenderVisualization"
     },
     "arguments": {
