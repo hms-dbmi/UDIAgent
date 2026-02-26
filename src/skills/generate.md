@@ -34,4 +34,10 @@ The output must be a valid UDI Grammar JSON object with these top-level keys:
 {"source": [{"name": "sales", "source": "./data/sales.csv"}], "transformation": [{"groupby": ["region"]}, {"rollup": {"total": {"op": "sum", "field": "amount"}}}], "representation": {"mark": "bar", "mapping": [{"encoding": "x", "field": "region", "type": "nominal"}, {"encoding": "y", "field": "total", "type": "quantitative"}]}}
 ```
 
+## Reference Examples
+
+The following are template examples showing common query patterns and their corresponding UDI Grammar specs. Use these as reference for the structure and patterns expected. Note: placeholders like `<E>`, `<F>`, `<F:n>` represent entity/field names that should be replaced with actual values from the user's data schema.
+
+{{examples}}
+
 Respond with only the JSON spec. Do not include any explanation or markdown formatting.

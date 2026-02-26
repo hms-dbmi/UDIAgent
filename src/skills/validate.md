@@ -38,4 +38,10 @@ The output must be a valid UDI Grammar JSON object with these top-level keys:
 {"source": [{"name": "sales", "source": "./data/sales.csv"}], "transformation": [{"groupby": ["region"]}, {"rollup": {"total": {"op": "sum", "field": "amount"}}}], "representation": {"mark": "bar", "mapping": [{"encoding": "x", "field": "region", "type": "nominal"}, {"encoding": "y", "field": "total", "type": "quantitative"}]}}
 ```
 
+## Reference Examples
+
+Use these template examples as additional reference for valid UDI Grammar spec structures:
+
+{{examples}}
+
 Fix the spec so it conforms to the UDI Grammar schema. Respond with only the corrected JSON spec. Do not include any explanation or markdown formatting.

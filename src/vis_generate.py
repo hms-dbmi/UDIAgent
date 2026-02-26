@@ -11,6 +11,7 @@ import json
 import re
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Optional
 
 import jsonschema
 
@@ -83,6 +84,53 @@ def load_skills(skills_dir="./src/skills"):
         skills[name] = Skill(name=name, description=description, instructions=body)
 
     return skills
+
+
+# ---------------------------------------------------------------------------
+# Few-shot example loading
+# ---------------------------------------------------------------------------
+
+_examples_cache: dict[str, Optional[str]] = {}
+
+
+def _load_examples(examples_path: str = "./src/skills/template_visualizations.json") -> str:
+    """Load few-shot examples from a JSON file and format them for prompt injection.
+
+    Each example is formatted as a query/spec pair. Results are cached by path.
+    Returns empty string if file doesn't exist or is empty.
+    """
+    if examples_path in _examples_cache:
+        return _examples_cache[examples_path]
+
+    path = Path(examples_path)
+    if not path.exists():
+        _examples_cache[examples_path] = ""
+        return ""
+
+    try:
+        data = json.loads(path.read_text())
+    except (json.JSONDecodeError, OSError):
+        _examples_cache[examples_path] = ""
+        return ""
+
+    if not data:
+        _examples_cache[examples_path] = ""
+        return ""
+
+    lines = []
+    for i, ex in enumerate(data, 1):
+        query = ex.get("query_template", "")
+        spec = ex.get("spec_template", "")
+        if not query or not spec:
+            continue
+        lines.append(f"**Example {i}** (type: {ex.get('chart_type', 'unknown')})")
+        lines.append(f"- Query: {query}")
+        lines.append(f"- Spec: {spec}")
+        lines.append("")
+
+    result = "\n".join(lines)
+    _examples_cache[examples_path] = result
+    return result
 
 
 # ---------------------------------------------------------------------------
@@ -191,9 +239,14 @@ def _execute_generate(skill, context):
     config = context["config"]
     backend = config.get("backend", "gpt")
 
+    # Load few-shot examples
+    examples_path = config.get("examples_path", "./src/skills/template_visualizations.json")
+    examples = _load_examples(examples_path)
+
     # Render skill instructions with context variables
     rendered = _render_template(skill.instructions, {
         "data_schema": context["data_schema"],
+        "examples": examples,
     })
 
     # Build messages: skill instructions as system prompt + user conversation
@@ -217,12 +270,17 @@ def _execute_validate(skill, context):
 
     spec_dict, errors = _parse_and_validate(spec_str, grammar["schema_dict"])
 
+    # Load few-shot examples for validation context
+    examples_path = config.get("examples_path", "./src/skills/template_visualizations.json")
+    examples = _load_examples(examples_path)
+
     corrections = 0
     while errors and corrections < max_corrections:
         # Render the validate skill with current errors as context
         rendered = _render_template(skill.instructions, {
             "spec_str": spec_str if isinstance(spec_str, str) else json.dumps(spec_str),
             "errors": "; ".join(errors),
+            "examples": examples,
         })
 
         feedback_content = spec_str if isinstance(spec_str, str) else json.dumps(spec_str)
