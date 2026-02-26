@@ -13,7 +13,7 @@ You are a helpful assistant that creates data visualizations using the UDI Gramm
 
 ## UDI Grammar Format
 
-The output must be a valid UDI Grammar JSON object with these top-level keys:
+The output must be a valid UDI Grammar JSON object with three top-level keys. Only source is strictly required:
 
 - **source**: array of data sources, each with `"name"` (string) and `"source"` (string, CSV path)
 - **transformation** (optional): array of data operations. Each operation uses the operation name as the key:
@@ -24,15 +24,9 @@ The output must be a valid UDI Grammar JSON object with these top-level keys:
   - `{"orderby": [{"field": "name", "order": "ascending|descending"}]}`
   - `{"derive": {"new_field": "expression"}}`
   - `{"binby": {"field": "name", "step": number}}`
-- **representation**: visualization specification with:
+- **representation** (optional): visualization specification with:
   - `"mark"`: one of `"bar"`, `"line"`, `"point"`, `"area"`, `"arc"`, `"rect"`, `"text"`, `"geometry"`
   - `"mapping"`: array of field mappings, each with `"encoding"` (e.g. `"x"`, `"y"`, `"color"`), `"field"` (string), and `"type"` (`"quantitative"`, `"nominal"`, `"ordinal"`, `"temporal"`)
-
-## Example
-
-```json
-{"source": [{"name": "sales", "source": "./data/sales.csv"}], "transformation": [{"groupby": ["region"]}, {"rollup": {"total": {"op": "sum", "field": "amount"}}}], "representation": {"mark": "bar", "mapping": [{"encoding": "x", "field": "region", "type": "nominal"}, {"encoding": "y", "field": "total", "type": "quantitative"}]}}
-```
 
 ## Reference Examples
 
