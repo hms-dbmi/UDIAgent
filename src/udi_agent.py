@@ -1,5 +1,5 @@
 import json
-from openai import OpenAI
+from langfuse.openai import OpenAI
 from jinja2 import Template
 from transformers import AutoTokenizer
 
