@@ -11,6 +11,7 @@ import json
 import re
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Optional
 
 import jsonschema
 
@@ -19,9 +20,11 @@ import jsonschema
 # Skill data model
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class Skill:
     """A skill loaded from a markdown file."""
+
     name: str
     description: str
     instructions: str
@@ -30,6 +33,7 @@ class Skill:
 # ---------------------------------------------------------------------------
 # Skill loader
 # ---------------------------------------------------------------------------
+
 
 def _parse_frontmatter(text):
     """Parse YAML frontmatter from a markdown string.
@@ -40,7 +44,7 @@ def _parse_frontmatter(text):
     if not match:
         return {}, text
 
-    body = text[match.end():]
+    body = text[match.end() :]
     metadata = {}
     for line in match.group(1).splitlines():
         line = line.strip()
@@ -56,6 +60,7 @@ def _render_template(instructions, variables):
     Supports including arbitrary textual data in skill prompts.
     Unknown placeholders are left as-is.
     """
+
     def replacer(m):
         key = m.group(1).strip()
         if key in variables:
@@ -86,8 +91,58 @@ def load_skills(skills_dir="./src/skills"):
 
 
 # ---------------------------------------------------------------------------
+# Few-shot example loading
+# ---------------------------------------------------------------------------
+
+_examples_cache: dict[str, Optional[str]] = {}
+
+
+def _load_examples(
+    examples_path: str = "./src/skills/template_visualizations.json",
+) -> str:
+    """Load few-shot examples from a JSON file and format them for prompt injection.
+
+    Each example is formatted as a query/spec pair. Results are cached by path.
+    Returns empty string if file doesn't exist or is empty.
+    """
+    if examples_path in _examples_cache:
+        return _examples_cache[examples_path]
+
+    path = Path(examples_path)
+    if not path.exists():
+        _examples_cache[examples_path] = ""
+        return ""
+
+    try:
+        data = json.loads(path.read_text())
+    except (json.JSONDecodeError, OSError):
+        _examples_cache[examples_path] = ""
+        return ""
+
+    if not data:
+        _examples_cache[examples_path] = ""
+        return ""
+
+    lines = []
+    for i, ex in enumerate(data, 1):
+        query = ex.get("query_template", "")
+        spec = ex.get("spec_template", "")
+        if not query or not spec:
+            continue
+        lines.append(f"**Example {i}** (type: {ex.get('chart_type', 'unknown')})")
+        lines.append(f"- Query: {query}")
+        lines.append(f"- Spec: {spec}")
+        lines.append("")
+
+    result = "\n".join(lines)
+    _examples_cache[examples_path] = result
+    return result
+
+
+# ---------------------------------------------------------------------------
 # Grammar loading (unchanged — config/setup, not a skill)
 # ---------------------------------------------------------------------------
+
 
 def load_grammar(grammar_name, base_path="./src"):
     """Load a grammar definition by name.
@@ -117,6 +172,7 @@ def load_grammar(grammar_name, base_path="./src"):
 # ---------------------------------------------------------------------------
 # LLM call helpers
 # ---------------------------------------------------------------------------
+
 
 def _call_llm(agent, messages, grammar, config, backend):
     """Call the LLM and return the raw spec string."""
@@ -184,17 +240,31 @@ def _parse_and_validate(spec_str, schema_dict):
 # Skill executor
 # ---------------------------------------------------------------------------
 
+
 def _execute_generate(skill, context):
     """Execute the generate skill: single-shot LLM call."""
     agent = context["agent"]
     grammar = context["grammar"]
     config = context["config"]
+    data_schema = context["data_schema"]
+    data_schema_simple = simplify_data_schema(data_schema)
+    # print(f"Simplified data schema for LLM:\n{data_schema_simple}")
     backend = config.get("backend", "gpt")
 
+    # Load few-shot examples
+    examples_path = config.get(
+        "examples_path", "./src/skills/template_visualizations.json"
+    )
+    examples = _load_examples(examples_path)
+
     # Render skill instructions with context variables
-    rendered = _render_template(skill.instructions, {
-        "data_schema": context["data_schema"],
-    })
+    rendered = _render_template(
+        skill.instructions,
+        {
+            "data_schema": data_schema_simple,
+            "examples": examples,
+        },
+    )
 
     # Build messages: skill instructions as system prompt + user conversation
     gen_messages = [{"role": "system", "content": rendered}] + list(context["messages"])
@@ -205,27 +275,103 @@ def _execute_generate(skill, context):
     return context
 
 
+def simplify_data_schema(data_schema):
+    """Simplify the data schema for better LLM consumption.
+        - Convert from json to yaml.
+        - resolve file path.
+        - remove empty tables, extra information, etc.
+    Format should be:
+        tables:
+        - name: table1
+          description: description of table1 (optional)
+          path: resolved file path of table1 [udi:path + resources[i].path]
+          rows: row count
+          columns:
+            - name: column1
+              description: description of column1 (optional)
+              type: data type of column1 [udi:data_type]
+    """
+    try:
+        schema = (
+            json.loads(data_schema) if isinstance(data_schema, str) else data_schema
+        )
+    except (json.JSONDecodeError, TypeError):
+        return data_schema
+
+    base_path = schema.get("udi:path", "./")
+    lines = ["tables:"]
+
+    for resource in schema.get("resources", []):
+        row_count = resource.get("udi:row_count", 0)
+        if row_count == 0:
+            continue
+
+        name = resource.get("name", "")
+        description = resource.get("description", "")
+        path = base_path + resource.get("path", "")
+
+        lines.append(f"  - name: {name}")
+        lines.append(f"    path: {path}")
+        if description:
+            lines.append(f"    description: {description}")
+        # lines.append(f"    rows: {row_count}")
+
+        fields = resource.get("schema", {}).get("fields", [])
+        columns = []
+        for field in fields:
+            if field.get("udi:cardinality", 0) == 0:
+                continue
+            col_name = field.get("name", "")
+            col_type = field.get("udi:data_type")
+            desc = field.get("description", "").strip()
+            col_lines = [f"        - name: {col_name}"]
+            col_lines.append(f"          type: {col_type}")
+            if desc:
+                col_lines.append(f"          description: {desc}")
+            columns.append("\n".join(col_lines))
+
+        if columns:
+            lines.append("    columns:")
+            lines.extend(columns)
+
+    return "\n".join(lines)
+
+
 def _execute_validate(skill, context):
     """Execute the validate skill: parse, validate, and correct via LLM."""
     agent = context["agent"]
     grammar = context["grammar"]
     config = context["config"]
     backend = config.get("backend", "gpt")
-    max_corrections = config.get("max_corrections", 2)
+    max_corrections = config.get("max_corrections", 0)
     spec_str = context.get("spec_str", "{}")
     gen_messages = context.get("gen_messages", list(context["messages"]))
 
     spec_dict, errors = _parse_and_validate(spec_str, grammar["schema_dict"])
 
+    # Load few-shot examples for validation context
+    examples_path = config.get(
+        "examples_path", "./src/skills/template_visualizations.json"
+    )
+    examples = _load_examples(examples_path)
+
     corrections = 0
     while errors and corrections < max_corrections:
         # Render the validate skill with current errors as context
-        rendered = _render_template(skill.instructions, {
-            "spec_str": spec_str if isinstance(spec_str, str) else json.dumps(spec_str),
-            "errors": "; ".join(errors),
-        })
+        rendered = _render_template(
+            skill.instructions,
+            {
+                "spec_str": spec_str
+                if isinstance(spec_str, str)
+                else json.dumps(spec_str),
+                "errors": "; ".join(errors),
+                "examples": examples,
+            },
+        )
 
-        feedback_content = spec_str if isinstance(spec_str, str) else json.dumps(spec_str)
+        feedback_content = (
+            spec_str if isinstance(spec_str, str) else json.dumps(spec_str)
+        )
         gen_messages.append({"role": "assistant", "content": feedback_content})
         gen_messages.append({"role": "user", "content": rendered})
 
@@ -273,10 +419,15 @@ def run_skills(plan, context, registry):
             # call LLM, store raw result. Works for simple skills that just
             # need an LLM response without custom parsing.
             rendered = _render_template(skill.instructions, context)
-            messages = [{"role": "system", "content": rendered}] + list(context["messages"])
+            messages = [{"role": "system", "content": rendered}] + list(
+                context["messages"]
+            )
             spec_str = _call_llm(
-                context["agent"], messages, context["grammar"],
-                context["config"], context["config"].get("backend", "gpt"),
+                context["agent"],
+                messages,
+                context["grammar"],
+                context["config"],
+                context["config"].get("backend", "gpt"),
             )
             context["spec_str"] = spec_str
 
@@ -286,6 +437,7 @@ def run_skills(plan, context, registry):
 # ---------------------------------------------------------------------------
 # Public API (backwards compatible)
 # ---------------------------------------------------------------------------
+
 
 def generate_vis_spec(agent, messages, data_schema, grammar, config=None):
     """Generate a visualization spec using the skills pipeline.
@@ -327,7 +479,9 @@ def generate_vis_spec(agent, messages, data_schema, grammar, config=None):
     context = run_skills(plan, context, registry)
 
     return {
-        "spec": context["spec_dict"] if context["spec_dict"] is not None else context["spec_str"],
+        "spec": context["spec_dict"]
+        if context["spec_dict"] is not None
+        else context["spec_str"],
         "valid": context["valid"],
         "errors": context["errors"],
         "corrections": context["corrections"],
