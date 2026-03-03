@@ -246,6 +246,9 @@ def _execute_generate(skill, context):
     agent = context["agent"]
     grammar = context["grammar"]
     config = context["config"]
+    data_schema = context["data_schema"]
+    data_schema_simple = simplify_data_schema(data_schema)
+    # print(f"Simplified data schema for LLM:\n{data_schema_simple}")
     backend = config.get("backend", "gpt")
 
     # Load few-shot examples
@@ -258,7 +261,7 @@ def _execute_generate(skill, context):
     rendered = _render_template(
         skill.instructions,
         {
-            "data_schema": context["data_schema"],
+            "data_schema": data_schema_simple,
             "examples": examples,
         },
     )
@@ -272,13 +275,75 @@ def _execute_generate(skill, context):
     return context
 
 
+def simplify_data_schema(data_schema):
+    """Simplify the data schema for better LLM consumption.
+        - Convert from json to yaml.
+        - resolve file path.
+        - remove empty tables, extra information, etc.
+    Format should be:
+        tables:
+        - name: table1
+          description: description of table1 (optional)
+          path: resolved file path of table1 [udi:path + resources[i].path]
+          rows: row count
+          columns:
+            - name: column1
+              description: description of column1 (optional)
+              type: data type of column1 [udi:data_type]
+    """
+    try:
+        schema = (
+            json.loads(data_schema) if isinstance(data_schema, str) else data_schema
+        )
+    except (json.JSONDecodeError, TypeError):
+        return data_schema
+
+    base_path = schema.get("udi:path", "./")
+    lines = ["tables:"]
+
+    for resource in schema.get("resources", []):
+        row_count = resource.get("udi:row_count", 0)
+        if row_count == 0:
+            continue
+
+        name = resource.get("name", "")
+        description = resource.get("description", "")
+        path = base_path + resource.get("path", "")
+
+        lines.append(f"  - name: {name}")
+        lines.append(f"    path: {path}")
+        if description:
+            lines.append(f"    description: {description}")
+        # lines.append(f"    rows: {row_count}")
+
+        fields = resource.get("schema", {}).get("fields", [])
+        columns = []
+        for field in fields:
+            if field.get("udi:cardinality", 0) == 0:
+                continue
+            col_name = field.get("name", "")
+            col_type = field.get("udi:data_type")
+            desc = field.get("description", "").strip()
+            col_lines = [f"        - name: {col_name}"]
+            col_lines.append(f"          type: {col_type}")
+            if desc:
+                col_lines.append(f"          description: {desc}")
+            columns.append("\n".join(col_lines))
+
+        if columns:
+            lines.append("    columns:")
+            lines.extend(columns)
+
+    return "\n".join(lines)
+
+
 def _execute_validate(skill, context):
     """Execute the validate skill: parse, validate, and correct via LLM."""
     agent = context["agent"]
     grammar = context["grammar"]
     config = context["config"]
     backend = config.get("backend", "gpt")
-    max_corrections = config.get("max_corrections", 2)
+    max_corrections = config.get("max_corrections", 0)
     spec_str = context.get("spec_str", "{}")
     gen_messages = context.get("gen_messages", list(context["messages"]))
 
