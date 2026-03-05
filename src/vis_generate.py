@@ -174,13 +174,14 @@ def load_grammar(grammar_name, base_path="./src"):
 # ---------------------------------------------------------------------------
 
 
-def _call_llm(agent, messages, grammar, config, backend):
+def _call_llm(agent, messages, grammar, config, backend, openai_api_key=None):
     """Call the LLM and return the raw spec string."""
     if backend == "gpt":
         results = agent.gpt_completions_guided_json(
             messages=messages,
             json_schema=grammar["schema_string"],
             n=config.get("n", 1),
+            openai_api_key=openai_api_key,
         )
         if results:
             result = results[0]
@@ -269,7 +270,7 @@ def _execute_generate(skill, context):
     # Build messages: skill instructions as system prompt + user conversation
     gen_messages = [{"role": "system", "content": rendered}] + list(context["messages"])
 
-    spec_str = _call_llm(agent, gen_messages, grammar, config, backend)
+    spec_str = _call_llm(agent, gen_messages, grammar, config, backend, openai_api_key=context.get("openai_api_key"))
     context["spec_str"] = spec_str
     context["gen_messages"] = gen_messages
     return context
@@ -375,7 +376,7 @@ def _execute_validate(skill, context):
         gen_messages.append({"role": "assistant", "content": feedback_content})
         gen_messages.append({"role": "user", "content": rendered})
 
-        spec_str = _call_llm(agent, gen_messages, grammar, config, backend)
+        spec_str = _call_llm(agent, gen_messages, grammar, config, backend, openai_api_key=context.get("openai_api_key"))
         spec_dict, errors = _parse_and_validate(spec_str, grammar["schema_dict"])
         corrections += 1
 
@@ -428,6 +429,7 @@ def run_skills(plan, context, registry):
                 context["grammar"],
                 context["config"],
                 context["config"].get("backend", "gpt"),
+                openai_api_key=context.get("openai_api_key"),
             )
             context["spec_str"] = spec_str
 
@@ -439,7 +441,7 @@ def run_skills(plan, context, registry):
 # ---------------------------------------------------------------------------
 
 
-def generate_vis_spec(agent, messages, data_schema, grammar, config=None):
+def generate_vis_spec(agent, messages, data_schema, grammar, config=None, openai_api_key=None):
     """Generate a visualization spec using the skills pipeline.
 
     Args:
@@ -472,6 +474,7 @@ def generate_vis_spec(agent, messages, data_schema, grammar, config=None):
         "valid": False,
         "errors": [],
         "corrections": 0,
+        "openai_api_key": openai_api_key,
     }
 
     # Execute the default plan
