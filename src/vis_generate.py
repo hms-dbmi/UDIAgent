@@ -131,6 +131,15 @@ def _load_examples(
             continue
         lines.append(f"**Example {i}** (type: {ex.get('chart_type', 'unknown')})")
         lines.append(f"- Query: {query}")
+        desc = ex.get("description", "")
+        if desc:
+            lines.append(f"- Description: {desc}")
+        design = ex.get("design_considerations", "")
+        if design:
+            lines.append(f"- Design: {design}")
+        tasks = ex.get("tasks", "")
+        if tasks:
+            lines.append(f"- Tasks: {tasks}")
         lines.append(f"- Spec: {spec}")
         lines.append("")
 
@@ -326,6 +335,9 @@ def simplify_data_schema(data_schema):
             desc = field.get("description", "").strip()
             col_lines = [f"        - name: {col_name}"]
             col_lines.append(f"          type: {col_type}")
+            if col_type == "nominal" or col_type == "ordinal":
+                cardinality = field.get("udi:cardinality", 0)
+                col_lines.append(f"          unique_values: {cardinality}")
             if desc:
                 col_lines.append(f"          description: {desc}")
             columns.append("\n".join(col_lines))
