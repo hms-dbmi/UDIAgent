@@ -183,6 +183,26 @@ def load_grammar(grammar_name, base_path="./src"):
 # ---------------------------------------------------------------------------
 
 
+def _call_llm_with_tools(agent, messages, tools, config):
+    """Call the LLM with function-calling tools. Returns (tool_name, arguments) or None."""
+    try:
+        resp = agent.gpt_model.chat.completions.create(
+            model=agent.gpt_model_name,
+            messages=messages,
+            tools=tools,
+            tool_choice="auto",
+            temperature=0.0,
+            max_tokens=1024,
+        )
+        choice = resp.choices[0]
+        if choice.message.tool_calls:
+            tc = choice.message.tool_calls[0]
+            return tc.function.name, json.loads(tc.function.arguments)
+    except Exception:
+        pass
+    return None
+
+
 def _call_llm(agent, messages, grammar, config, backend):
     """Call the LLM and return the raw spec string."""
     if backend == "gpt":
@@ -250,23 +270,59 @@ def _parse_and_validate(spec_str, schema_dict):
 # ---------------------------------------------------------------------------
 
 
+def _load_generated_tools():
+    """Load generated tool definitions and builders. Returns (tool_defs, builders, schema) or None."""
+    try:
+        from generated_vis_tools import TOOL_DEFS, TOOL_BUILDERS, SCHEMA
+        return TOOL_DEFS, TOOL_BUILDERS, SCHEMA
+    except ImportError:
+        return None
+
+
 def _execute_generate(skill, context):
-    """Execute the generate skill: single-shot LLM call."""
+    """Execute the generate skill: try function-calling tools first, fall back to LLM."""
     agent = context["agent"]
     grammar = context["grammar"]
     config = context["config"]
     data_schema = context["data_schema"]
     data_schema_simple = simplify_data_schema(data_schema)
-    # print(f"Simplified data schema for LLM:\n{data_schema_simple}")
     backend = config.get("backend", "gpt")
 
-    # Load few-shot examples
+    # --- Primary path: function-calling with generated tools ---
+    generated = _load_generated_tools()
+    if generated is not None and backend == "gpt":
+        tool_defs, tool_builders, tool_schema = generated
+
+        # Build system prompt with data schema context
+        system_msg = (
+            "You are a data visualization assistant. The user wants a visualization "
+            "from the available datasets. Select the most appropriate visualization "
+            "tool and provide the correct arguments.\n\n"
+            f"## Available Datasets\n\n{data_schema_simple}"
+        )
+        tool_messages = [{"role": "system", "content": system_msg}] + list(context["messages"])
+
+        result = _call_llm_with_tools(agent, tool_messages, tool_defs, config)
+        if result is not None:
+            tool_name, tool_args = result
+            builder = tool_builders.get(tool_name)
+            if builder is not None:
+                try:
+                    spec_dict = builder(**tool_args, _schema=tool_schema)
+                    spec_str = json.dumps(spec_dict)
+                    context["spec_str"] = spec_str
+                    context["gen_messages"] = tool_messages
+                    context["tool_used"] = tool_name
+                    return context
+                except Exception:
+                    pass  # Fall through to LLM generation
+
+    # --- Fallback: single-shot LLM generation ---
     examples_path = config.get(
         "examples_path", "./src/skills/template_visualizations.json"
     )
     examples = _load_examples(examples_path)
 
-    # Render skill instructions with context variables
     rendered = _render_template(
         skill.instructions,
         {
@@ -275,12 +331,12 @@ def _execute_generate(skill, context):
         },
     )
 
-    # Build messages: skill instructions as system prompt + user conversation
     gen_messages = [{"role": "system", "content": rendered}] + list(context["messages"])
 
     spec_str = _call_llm(agent, gen_messages, grammar, config, backend)
     context["spec_str"] = spec_str
     context["gen_messages"] = gen_messages
+    context["tool_used"] = None
     return context
 
 
