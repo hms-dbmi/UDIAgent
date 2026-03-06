@@ -130,6 +130,8 @@ def _derive_tool_name(template: dict, index: int) -> str:
 def _build_tool_description(template: dict) -> str:
     """Build a rich description from template metadata."""
     parts = []
+    if template.get("chart_type"):
+        parts.append(f"[{template['chart_type']}]")
     if template.get("description"):
         parts.append(template["description"])
     if template.get("design_considerations"):
