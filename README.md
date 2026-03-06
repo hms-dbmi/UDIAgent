@@ -22,3 +22,37 @@ This is the endpoint that is called by the YAC frontend. The `udi_api.py` script
 | LANGFUSE_SECRET_KEY | `LANGFUSE_SECRET_KEY=sk-your-key-goes-here`            | Optional, used for integration with LangFuse observability/tracing.                                                                                                                                  |
 | LANGFUSE_PUBLIC_KEY | `LANGFUSE_PUBLIC_KEY=pk-your-key-goes-here`            | Optional, used for integration with LangFuse observability/tracing.                                                                                                                                  |
 | LANGFUSE_BASE_URL   | `LANGFUSE_BASE_URL=https://your-langfuse-instance.com` | Optional, used for integration with LangFuse observability/tracing.                                                                                                                                  |
+
+# benchmarking process
+
+## Step 0: Start the API server
+
+Start the UDI API server in the background on port 8007, then wait a few seconds for it to be ready:
+
+```bash
+uv run fastapi dev ./src/udi_api.py --port 8007 &
+```
+
+## Step 1: Run tiny benchmark (1 example)
+
+Run the benchmark on the tiny dataset to validate the pipeline works end-to-end:
+
+```bash
+uv run python ./src/benchmark.py --no-orchestrator --path ./data/benchmark_dqvis/tiny.jsonl
+```
+
+Check the output in the latest `./out/` timestamped directory. Review both `benchmark_results.json` and `benchmark_analysis.json`.
+
+## Step 2: Run small benchmark (100 examples)
+
+Once tiny passes cleanly, run the small benchmark:
+
+```bash
+uv run python ./src/benchmark.py --no-orchestrator  --path ./data/benchmark_dqvis/small.jsonl --workers 5
+```
+
+If a run fails partway through, it can be resumed with:
+
+```bash
+uv run python ./src/benchmark.py --path ./data/benchmark_dqvis/small.jsonl --workers 5 --resume ./out/<TIMESTAMP>/benchmark_results.json
+```
