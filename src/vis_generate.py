@@ -125,7 +125,11 @@ def _load_examples(
 
     lines = []
     for i, ex in enumerate(data, 1):
-        query = ex.get("query_template", "")
+        query_templates = ex.get("query_templates", ex.get("query_template", ""))
+        if isinstance(query_templates, list):
+            query = "; ".join(query_templates)
+        else:
+            query = query_templates
         spec = ex.get("spec_template", "")
         if not query or not spec:
             continue
@@ -317,6 +321,35 @@ def instantiate_template(spec_template, bindings, schema):
     return json.loads(spec)
 
 
+def _extract_xy_placeholders(spec_template):
+    """Extract placeholder names used in x and y encodings from a spec template.
+
+    Returns dict like {"x": "F2", "y": "F1"} with the first placeholder-based
+    field found for each encoding. Non-placeholder fields (e.g. "count <E>") are ignored.
+    """
+    result = {}
+    try:
+        spec = json.loads(spec_template)
+    except (json.JSONDecodeError, TypeError):
+        return result
+
+    rep = spec.get("representation", {})
+    reps = rep if isinstance(rep, list) else [rep]
+    for r in reps:
+        mappings = r.get("mapping", [])
+        if isinstance(mappings, dict):
+            mappings = [mappings]
+        for m in mappings:
+            enc = m.get("encoding")
+            field = m.get("field", "")
+            if enc in ("x", "y") and enc not in result:
+                # Only consider fields that are a single placeholder like "<F1>"
+                match = re.fullmatch(r'<([^>]+)>', field)
+                if match:
+                    result[enc] = match.group(1)
+    return result
+
+
 def validate_bindings(spec_template, bindings, schema):
     """Validate tool bindings against the schema before template instantiation.
 
@@ -355,6 +388,19 @@ def validate_bindings(spec_template, bindings, schema):
         )
         if not has_rel:
             errors.append(f"No relationship between '{e1}' and '{e2}'")
+
+    # Check that x and y encodings don't resolve to the same field
+    xy_placeholders = _extract_xy_placeholders(spec_template)
+    if xy_placeholders.get("x") and xy_placeholders.get("y"):
+        x_binding = xy_placeholders["x"].split(":")[0]  # strip type suffix
+        y_binding = xy_placeholders["y"].split(":")[0]
+        x_val = bindings.get(x_binding)
+        y_val = bindings.get(y_binding)
+        if x_val and y_val and x_val == y_val:
+            errors.append(
+                f"x and y encodings must use different fields: "
+                f"both '{x_binding}' and '{y_binding}' are set to '{x_val}'"
+            )
 
     # Extract placeholder type requirements from spec_template
     placeholder_types = {}
