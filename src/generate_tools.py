@@ -192,8 +192,11 @@ def _build_tool_description(template: dict) -> str:
         parts.append(f"Design: {template['design_considerations']}")
     if template.get("tasks"):
         parts.append(f"Tasks: {template['tasks']}")
-    if template.get("query_template"):
-        parts.append(f"Query pattern: {template['query_template']}")
+    query_templates = template.get("query_templates", [])
+    if isinstance(query_templates, str):
+        query_templates = [query_templates]
+    if query_templates:
+        parts.append(f"Query patterns: {'; '.join(query_templates)}")
     return " ".join(parts)
 
 
