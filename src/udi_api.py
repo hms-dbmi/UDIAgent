@@ -438,7 +438,11 @@ def function_call_render_visualization_pipeline(request: YACCompletionRequest):
         data_schema=request.dataSchema,
         grammar=_pipeline_grammar,
     )
-    return {"name": "RenderVisualization", "arguments": {"spec": result["spec"]}}
+    return {
+        "name": "RenderVisualization",
+        "arguments": {"spec": result["spec"]},
+        "meta": result.get("meta"),
+    }
 
 
 def function_call_render_visualization(request: YACCompletionRequest):

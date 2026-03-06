@@ -125,7 +125,11 @@ def _load_examples(
 
     lines = []
     for i, ex in enumerate(data, 1):
-        query = ex.get("query_template", "")
+        query_templates = ex.get("query_templates", ex.get("query_template", ""))
+        if isinstance(query_templates, list):
+            query = "; ".join(query_templates)
+        else:
+            query = query_templates
         spec = ex.get("spec_template", "")
         if not query or not spec:
             continue
@@ -181,6 +185,26 @@ def load_grammar(grammar_name, base_path="./src"):
 # ---------------------------------------------------------------------------
 # LLM call helpers
 # ---------------------------------------------------------------------------
+
+
+def _call_llm_with_tools(agent, messages, tools, config):
+    """Call the LLM with function-calling tools. Returns (tool_name, arguments) or None."""
+    try:
+        resp = agent.gpt_model.chat.completions.create(
+            model=agent.gpt_model_name,
+            messages=messages,
+            tools=tools,
+            tool_choice="auto",
+            temperature=0.0,
+            max_tokens=1024,
+        )
+        choice = resp.choices[0]
+        if choice.message.tool_calls:
+            tc = choice.message.tool_calls[0]
+            return tc.function.name, json.loads(tc.function.arguments)
+    except Exception:
+        pass
+    return None
 
 
 def _call_llm(agent, messages, grammar, config, backend):
@@ -250,23 +274,270 @@ def _parse_and_validate(spec_str, schema_dict):
 # ---------------------------------------------------------------------------
 
 
+def _resolve_placeholder(tag, bindings, schema):
+    """Resolve a single <tag> placeholder using bindings and schema."""
+    # Entity URL: E.url, E1.url, E2.url
+    if tag.endswith(".url"):
+        entity_key = tag[:-4]
+        entity_name = bindings.get(entity_key, "")
+        return schema.get("entities", {}).get(entity_name, {}).get("url", "")
+
+    # Relationship join keys: E1.r.E2.id.from, E1.r.E2.id.to
+    if ".r." in tag and ".id." in tag:
+        parts = tag.split(".")
+        e1_name = bindings.get(parts[0], "")
+        e2_name = bindings.get(parts[2], "")
+        direction = parts[4]  # "from" or "to"
+        for rel in schema.get("relationships", []):
+            if rel["from_entity"] == e1_name and rel["to_entity"] == e2_name:
+                return rel["from_field"] if direction == "from" else rel["to_field"]
+            if rel["from_entity"] == e2_name and rel["to_entity"] == e1_name:
+                return rel["to_field"] if direction == "from" else rel["from_field"]
+        return ""
+
+    # Strip type suffix: F:n -> F, E1.F:q -> E1.F
+    base = tag.split(":")[0] if ":" in tag else tag
+
+    return bindings.get(base, "")
+
+
+def instantiate_template(spec_template, bindings, schema):
+    """Resolve all <placeholder> tags in a spec template.
+
+    Args:
+        spec_template: Template string with <E>, <F:n>, <E.url>, etc.
+        bindings: Maps abstract names to real names, e.g. {"E": "donors", "F": "sex"}
+        schema: Dict with "entities" (name -> {"url": ...}) and "relationships".
+
+    Returns: Parsed spec dict.
+    """
+    spec = spec_template
+    while True:
+        match = re.search(r"<([^>]+)>", spec)
+        if not match:
+            break
+        resolved = _resolve_placeholder(match.group(1), bindings, schema)
+        spec = spec.replace(match.group(0), resolved, 1)
+    return json.loads(spec)
+
+
+def _extract_xy_placeholders(spec_template):
+    """Extract placeholder names used in x and y encodings from a spec template.
+
+    Returns dict like {"x": "F2", "y": "F1"} with the first placeholder-based
+    field found for each encoding. Non-placeholder fields (e.g. "count <E>") are ignored.
+    """
+    result = {}
+    try:
+        spec = json.loads(spec_template)
+    except (json.JSONDecodeError, TypeError):
+        return result
+
+    rep = spec.get("representation", {})
+    reps = rep if isinstance(rep, list) else [rep]
+    for r in reps:
+        mappings = r.get("mapping", [])
+        if isinstance(mappings, dict):
+            mappings = [mappings]
+        for m in mappings:
+            enc = m.get("encoding")
+            field = m.get("field", "")
+            if enc in ("x", "y") and enc not in result:
+                # Only consider fields that are a single placeholder like "<F1>"
+                match = re.fullmatch(r'<([^>]+)>', field)
+                if match:
+                    result[enc] = match.group(1)
+    return result
+
+
+def validate_bindings(spec_template, bindings, schema):
+    """Validate tool bindings against the schema before template instantiation.
+
+    Returns list of error strings (empty = valid).
+    """
+    errors = []
+    entities = schema.get("entities", {})
+    entity_names = list(entities.keys())
+
+    # Collect entity bindings (E, E1, E2)
+    entity_bindings = {}
+    for key, val in bindings.items():
+        if key in ("E", "E1", "E2"):
+            entity_bindings[key] = val
+
+    # Check entities exist
+    for key, name in entity_bindings.items():
+        if name not in entities:
+            errors.append(f"Entity '{name}' not found. Available: {', '.join(entity_names)}")
+
+    if errors:
+        return errors
+
+    # Check join entities are different
+    if "E1" in entity_bindings and "E2" in entity_bindings:
+        if entity_bindings["E1"] == entity_bindings["E2"]:
+            errors.append(f"entity1 and entity2 cannot be the same ('{entity_bindings['E1']}')")
+            return errors
+
+        # Check relationship exists
+        e1, e2 = entity_bindings["E1"], entity_bindings["E2"]
+        has_rel = any(
+            (r["from_entity"] == e1 and r["to_entity"] == e2) or
+            (r["from_entity"] == e2 and r["to_entity"] == e1)
+            for r in schema.get("relationships", [])
+        )
+        if not has_rel:
+            errors.append(f"No relationship between '{e1}' and '{e2}'")
+
+    # Check that x and y encodings don't resolve to the same field
+    xy_placeholders = _extract_xy_placeholders(spec_template)
+    if xy_placeholders.get("x") and xy_placeholders.get("y"):
+        x_binding = xy_placeholders["x"].split(":")[0]  # strip type suffix
+        y_binding = xy_placeholders["y"].split(":")[0]
+        x_val = bindings.get(x_binding)
+        y_val = bindings.get(y_binding)
+        if x_val and y_val and x_val == y_val:
+            errors.append(
+                f"x and y encodings must use different fields: "
+                f"both '{x_binding}' and '{y_binding}' are set to '{x_val}'"
+            )
+
+    # Extract placeholder type requirements from spec_template
+    placeholder_types = {}
+    for match in re.finditer(r'<([^>]+)>', spec_template):
+        ph = match.group(1)
+        # Determine the binding key: strip type suffix, e.g. "F:n" -> "F", "E1.F:q" -> "E1.F"
+        base = ph.split(":")[0] if ":" in ph else ph
+        field_type = None
+        if ":n" in ph:
+            field_type = "nominal"
+        elif ":q" in ph and ":q|o|n" not in ph:
+            field_type = "quantitative"
+        elif ":o" in ph:
+            field_type = "ordinal"
+        if field_type and base not in placeholder_types:
+            placeholder_types[base] = field_type
+
+    # Check fields exist on entities and types match
+    for key, field_name in bindings.items():
+        if key in ("E", "E1", "E2"):
+            continue
+
+        # Determine which entity this field belongs to
+        if key.startswith("E1."):
+            entity_name = entity_bindings.get("E1")
+        elif key.startswith("E2."):
+            entity_name = entity_bindings.get("E2")
+        else:
+            entity_name = entity_bindings.get("E")
+
+        if not entity_name or entity_name not in entities:
+            continue
+
+        entity_fields = entities[entity_name].get("fields", {})
+
+        if field_name not in entity_fields:
+            available_by_type = {}
+            for fn, ft in entity_fields.items():
+                available_by_type.setdefault(ft, []).append(fn)
+            avail_str = "; ".join(f"{t}: {', '.join(fs)}" for t, fs in available_by_type.items())
+            errors.append(
+                f"Field '{field_name}' not found on entity '{entity_name}'. "
+                f"Available fields — {avail_str}"
+            )
+            continue
+
+        # Check field type matches template requirement
+        expected_type = placeholder_types.get(key)
+        if expected_type:
+            actual_type = entity_fields[field_name]
+            if actual_type != expected_type:
+                # List available fields of the expected type
+                matching = [fn for fn, ft in entity_fields.items() if ft == expected_type]
+                errors.append(
+                    f"Field '{field_name}' is {actual_type} but template requires {expected_type}. "
+                    f"Available {expected_type} fields: {', '.join(matching)}"
+                )
+
+    return errors
+
+
+def _load_generated_tools():
+    """Load generated tool data. Returns (tool_defs, tool_dispatch, templates, schema) or None."""
+    try:
+        from generated_vis_tools import TOOL_DEFS, TOOL_DISPATCH, TEMPLATES, SCHEMA
+        return TOOL_DEFS, TOOL_DISPATCH, TEMPLATES, SCHEMA
+    except ImportError:
+        return None
+
+
 def _execute_generate(skill, context):
-    """Execute the generate skill: single-shot LLM call."""
+    """Execute the generate skill: try function-calling tools first, fall back to LLM."""
     agent = context["agent"]
     grammar = context["grammar"]
     config = context["config"]
     data_schema = context["data_schema"]
     data_schema_simple = simplify_data_schema(data_schema)
-    # print(f"Simplified data schema for LLM:\n{data_schema_simple}")
     backend = config.get("backend", "gpt")
 
-    # Load few-shot examples
+    # --- Primary path: function-calling with generated tools ---
+    generated = _load_generated_tools()
+    if generated is not None and backend == "gpt":
+        tool_defs, tool_dispatch, templates, tool_schema = generated
+
+        # Build system prompt with data schema context
+        system_msg = (
+            "You are a data visualization assistant. The user wants a visualization "
+            "from the available datasets. Select the most appropriate visualization "
+            "tool and provide the correct arguments.\n\n"
+            f"## Available Datasets\n\n{data_schema_simple}"
+        )
+        tool_messages = [{"role": "system", "content": system_msg}] + list(context["messages"])
+
+        result = _call_llm_with_tools(agent, tool_messages, tool_defs, config)
+        for _attempt in range(2):  # initial + one retry
+            if result is None:
+                break
+            tool_name, tool_args = result
+            dispatch = tool_dispatch.get(tool_name)
+            if dispatch is None:
+                break
+
+            template_idx, param_map = dispatch
+            bindings = {param_map[k]: v for k, v in tool_args.items() if k in param_map}
+            validation_errors = validate_bindings(templates[template_idx], bindings, tool_schema)
+
+            if validation_errors:
+                if _attempt == 0:
+                    # Retry once with error hints
+                    hint = "The previous tool call had errors:\n" + "\n".join(f"- {e}" for e in validation_errors)
+                    retry_messages = tool_messages + [
+                        {"role": "assistant", "content": f"Tool call: {tool_name}({json.dumps(tool_args)})"},
+                        {"role": "user", "content": hint + "\n\nPlease select a corrected tool call."},
+                    ]
+                    result = _call_llm_with_tools(agent, retry_messages, tool_defs, config)
+                    continue
+                else:
+                    break  # Still invalid after retry, fall through
+
+            try:
+                spec_dict = instantiate_template(templates[template_idx], bindings, tool_schema)
+                spec_str = json.dumps(spec_dict)
+                context["spec_str"] = spec_str
+                context["gen_messages"] = tool_messages
+                context["tool_used"] = tool_name
+                context["tool_args"] = tool_args
+                context["validation_retries"] = _attempt
+                return context
+            except Exception:
+                break  # Fall through to LLM generation
+
+    # --- Fallback: single-shot LLM generation ---
     examples_path = config.get(
         "examples_path", "./src/skills/template_visualizations.json"
     )
     examples = _load_examples(examples_path)
 
-    # Render skill instructions with context variables
     rendered = _render_template(
         skill.instructions,
         {
@@ -275,12 +546,13 @@ def _execute_generate(skill, context):
         },
     )
 
-    # Build messages: skill instructions as system prompt + user conversation
     gen_messages = [{"role": "system", "content": rendered}] + list(context["messages"])
 
     spec_str = _call_llm(agent, gen_messages, grammar, config, backend)
     context["spec_str"] = spec_str
     context["gen_messages"] = gen_messages
+    context["tool_used"] = None
+    context["tool_args"] = None
     return context
 
 
@@ -490,11 +762,18 @@ def generate_vis_spec(agent, messages, data_schema, grammar, config=None):
     plan = ["generate", "validate"]
     context = run_skills(plan, context, registry)
 
+    spec = context["spec_dict"] if context["spec_dict"] is not None else context["spec_str"]
+    if not isinstance(spec, str):
+        spec = json.dumps(spec)
+
     return {
-        "spec": context["spec_dict"]
-        if context["spec_dict"] is not None
-        else context["spec_str"],
+        "spec": spec,
         "valid": context["valid"],
         "errors": context["errors"],
         "corrections": context["corrections"],
+        "meta": {
+            "tool_used": context.get("tool_used"),
+            "tool_args": context.get("tool_args"),
+            "validation_retries": context.get("validation_retries", 0),
+        },
     }
