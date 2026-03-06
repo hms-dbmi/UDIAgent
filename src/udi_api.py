@@ -1,6 +1,8 @@
 import os
 import json
 import logging
+from logging.handlers import RotatingFileHandler
+from pathlib import Path
 from typing import Union
 from pydantic import BaseModel
 from fastapi import FastAPI, Header, HTTPException, Depends
@@ -14,6 +16,19 @@ from jose import jwt, JWTError
 from dotenv import load_dotenv
 
 from vis_generate import generate_vis_spec, load_grammar
+
+# --- Logging setup ---
+_log_dir = Path(__file__).resolve().parent.parent / "logs"
+_log_dir.mkdir(exist_ok=True)
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+    handlers=[
+        RotatingFileHandler(_log_dir / "udi_agent.log", maxBytes=5_000_000, backupCount=3),
+        logging.StreamHandler(),
+    ],
+)
 
 logger = logging.getLogger(__name__)
 
