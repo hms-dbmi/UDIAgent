@@ -644,7 +644,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'chart. Design: Vertical orientation chosen because category count is small (<=4), '
                               'keeping x-axis labels readable. Tasks: Compare counts across categories; identify the '
                               'most or least common category. Query pattern: How many <E> are there, grouped by <F:n>?',
-               'name': 'vis_000_counts_entities_grouped_by_a_nominal',
+               'name': 'vis_000_barchart_count_vert_grouped',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
@@ -658,7 +658,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'allowing longer labels on the y-axis. Tasks: Compare counts across categories; identify '
                               'the most or least common category. Query pattern: How many <E> are there, grouped by '
                               '<F:n>?',
-               'name': 'vis_001_counts_entities_grouped_by_a_nominal',
+               'name': 'vis_001_barchart_count_horiz_grouped',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
@@ -672,7 +672,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'automatically. Tasks: Compare counts across categories; identify the most or least '
                               'common category; assess the range of counts. Query pattern: Make a bar chart of <E> '
                               '<F:n>.',
-               'name': 'vis_002_creates_a_vertical_bar_chart_counting',
+               'name': 'vis_002_barchart_count_vert',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
@@ -685,7 +685,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'Horizontal orientation for higher category counts (>4), improving label readability. '
                               'Tasks: Compare counts across categories; identify the most or least common category; '
                               'assess the range of counts. Query pattern: Make a bar chart of <E> <F:n>.',
-               'name': 'vis_003_creates_a_horizontal_bar_chart_counting',
+               'name': 'vis_003_barchart_count_horiz',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
@@ -700,7 +700,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'Requires a many-to-one relationship. Tasks: Compare counts across categories from a '
                               'related entity; discover cross-entity frequency patterns. Query pattern: How many <E1> '
                               'are there, grouped by <E2.F:n>?',
-               'name': 'vis_004_joins_two_entities_and_counts_records',
+               'name': 'vis_004_barchart_join_count_vert_grouped',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity1': {'description': 'The primary data entity (table).',
                                                          'type': 'string'},
@@ -717,7 +717,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'orientation for higher category counts (>4). Requires a many-to-one relationship. '
                               'Tasks: Compare counts across categories from a related entity; discover cross-entity '
                               'frequency patterns. Query pattern: How many <E1> are there, grouped by <E2.F:n>?',
-               'name': 'vis_005_joins_two_entities_and_counts_records',
+               'name': 'vis_005_barchart_join_count_horiz_grouped',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity1': {'description': 'The primary data entity (table).',
                                                          'type': 'string'},
@@ -735,7 +735,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'the secondary grouping field from the related entity. Tasks: Compare group compositions '
                               'across categories; identify dominant sub-groups within each bar. Query pattern: How '
                               'many <E1> are there, grouped by <E1.F1:n> and <E2.F2:n>?',
-               'name': 'vis_006_joins_two_entities_and_produces_a',
+               'name': 'vis_006_stacked_bar_join_count_vert_stacked_grouped',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity1': {'description': 'The primary data entity (table).',
                                                          'type': 'string'},
@@ -755,7 +755,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'Tasks: Compare group compositions across categories; identify dominant sub-groups '
                               'within each bar. Query pattern: How many <E1> are there, grouped by <E1.F1:n> and '
                               '<E2.F2:n>?',
-               'name': 'vis_007_joins_two_entities_and_produces_a',
+               'name': 'vis_007_stacked_bar_join_count_horiz_stacked_grouped',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity1': {'description': 'The primary data entity (table).',
                                                          'type': 'string'},
@@ -774,7 +774,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'Color encodes the sub-group field; x-axis shows the primary grouping. Tasks: Compare '
                               'group compositions across categories; identify dominant sub-groups within each bar. '
                               'Query pattern: How many <E> are there, grouped by <F1:n> and <F2:n>?',
-               'name': 'vis_008_counts_entities_grouped_by_two_nominal',
+               'name': 'vis_008_stacked_bar_count_vert_stacked_grouped',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
@@ -790,7 +790,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'Color encodes the sub-group field. Tasks: Compare group compositions across categories; '
                               'identify dominant sub-groups within each bar. Query pattern: How many <E> are there, '
                               'grouped by <F1:n> and <F2:n>?',
-               'name': 'vis_009_counts_entities_grouped_by_two_nominal',
+               'name': 'vis_009_stacked_bar_count_horiz_stacked_grouped',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
@@ -806,7 +806,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'allowing direct comparison between sub-groups. Suitable for small category counts '
                               '(<=4). Tasks: Directly compare sub-group counts within and across categories. Query '
                               'pattern: What is the count of <F1:n> for each <F2:n>?',
-               'name': 'vis_010_counts_entities_grouped_by_two_nominal',
+               'name': 'vis_010_stacked_bar_count_vert_grouped',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
@@ -822,7 +822,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'horizontal orientation. Chosen when at least one field has more than 4 categories. '
                               'Tasks: Directly compare sub-group counts within and across categories. Query pattern: '
                               'What is the count of <F1:n> for each <F2:n>?',
-               'name': 'vis_011_counts_entities_grouped_by_two_nominal',
+               'name': 'vis_011_stacked_bar_count_horiz_grouped',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
@@ -839,7 +839,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               '10 sub-group categories. Tasks: Compare group compositions across categories; identify '
                               'dominant sub-groups within each bar. Query pattern: What is the count of <F1:n> for '
                               'each <F2:n>?',
-               'name': 'vis_012_counts_entities_grouped_by_two_nominal',
+               'name': 'vis_012_stacked_bar_count_horiz_stacked_grouped',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
@@ -856,7 +856,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'Vertical layout for small category counts (<=4). Tasks: Compare relative proportions '
                               'across categories; identify which sub-groups dominate in each group. Query pattern: '
                               'What is the frequency of <F1:n> for each <F2:n>?',
-               'name': 'vis_013_shows_the_frequency_proportion_of_one',
+               'name': 'vis_013_stacked_bar_freq_vert_normalized',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
@@ -872,7 +872,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'proportional comparison. Horizontal layout for higher category counts (>4). Tasks: '
                               'Compare relative proportions across categories; identify which sub-groups dominate in '
                               'each group. Query pattern: What is the frequency of <F1:n> for each <F2:n>?',
-               'name': 'vis_014_shows_the_frequency_proportion_of_one',
+               'name': 'vis_014_stacked_bar_freq_horiz_normalized',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
@@ -888,7 +888,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'length encodes the minimum aggregate value for easy comparison. Tasks: Compare the '
                               'minimum value across categories; identify which group has the highest or lowest '
                               'minimum. Query pattern: What is the minimum <F1:q> for each <F2:n>?',
-               'name': 'vis_015_computes_the_minimum_of_a_quantitative',
+               'name': 'vis_015_barchart_min_horiz',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
@@ -904,7 +904,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'encodes the minimum aggregate value. Tasks: Compare the minimum value across '
                               'categories; identify which group has the highest or lowest minimum. Query pattern: What '
                               'is the minimum <F1:q> for each <F2:n>?',
-               'name': 'vis_016_computes_the_minimum_of_a_quantitative',
+               'name': 'vis_016_barchart_min_vert',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
@@ -920,7 +920,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'length encodes the maximum aggregate value for easy comparison. Tasks: Compare the '
                               'maximum value across categories; identify which group has the highest or lowest '
                               'maximum. Query pattern: What is the maximum <F1:q> for each <F2:n>?',
-               'name': 'vis_017_computes_the_maximum_of_a_quantitative',
+               'name': 'vis_017_barchart_max_horiz',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
@@ -936,7 +936,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'encodes the maximum aggregate value. Tasks: Compare the maximum value across '
                               'categories; identify which group has the highest or lowest maximum. Query pattern: What '
                               'is the maximum <F1:q> for each <F2:n>?',
-               'name': 'vis_018_computes_the_maximum_of_a_quantitative',
+               'name': 'vis_018_barchart_max_vert',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
@@ -952,7 +952,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'length encodes the average aggregate value for easy comparison. Tasks: Compare the '
                               'average value across categories; identify which group has the highest or lowest '
                               'average. Query pattern: What is the average <F1:q> for each <F2:n>?',
-               'name': 'vis_019_computes_the_average_of_a_quantitative',
+               'name': 'vis_019_barchart_avg_horiz',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
@@ -968,7 +968,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'encodes the average aggregate value. Tasks: Compare the average value across '
                               'categories; identify which group has the highest or lowest average. Query pattern: What '
                               'is the average <F1:q> for each <F2:n>?',
-               'name': 'vis_020_computes_the_average_of_a_quantitative',
+               'name': 'vis_020_barchart_avg_vert',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
@@ -984,7 +984,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'length encodes the median aggregate value for easy comparison. Tasks: Compare the '
                               'median value across categories; identify which group has the highest or lowest median. '
                               'Query pattern: What is the median <F1:q> for each <F2:n>?',
-               'name': 'vis_021_computes_the_median_of_a_quantitative',
+               'name': 'vis_021_barchart_median_horiz',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
@@ -1000,7 +1000,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'encodes the median aggregate value. Tasks: Compare the median value across categories; '
                               'identify which group has the highest or lowest median. Query pattern: What is the '
                               'median <F1:q> for each <F2:n>?',
-               'name': 'vis_022_computes_the_median_of_a_quantitative',
+               'name': 'vis_022_barchart_median_vert',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
@@ -1016,7 +1016,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'length encodes the total aggregate value for easy comparison. Tasks: Compare the total '
                               'value across categories; identify which group has the highest or lowest total. Query '
                               'pattern: What is the total <F1:q> for each <F2:n>?',
-               'name': 'vis_023_computes_the_total_of_a_quantitative',
+               'name': 'vis_023_barchart_sum_horiz',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
@@ -1032,7 +1032,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'encodes the total aggregate value. Tasks: Compare the total value across categories; '
                               'identify which group has the highest or lowest total. Query pattern: What is the total '
                               '<F1:q> for each <F2:n>?',
-               'name': 'vis_024_computes_the_total_of_a_quantitative',
+               'name': 'vis_024_barchart_sum_vert',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
@@ -1048,7 +1048,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'clusters, and outliers. Data size capped at 100k rows for rendering performance. Tasks: '
                               'Assess correlation between two variables; identify outliers and clusters. Query '
                               'pattern: Is there a correlation between <F1:q> and <F2:q>?',
-               'name': 'vis_025_plots_two_quantitative_fields_as_a',
+               'name': 'vis_025_scatterplot_basic',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
@@ -1063,7 +1063,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'quantitative x and y axes. Data size capped at 100k rows for performance. Tasks: Assess '
                               'correlation; identify clusters, outliers, extremes, and the range of both variables. '
                               'Query pattern: Make a scatterplot of <F1:q> and <F2:q>?',
-               'name': 'vis_026_creates_a_scatterplot_of_two_quantitative',
+               'name': 'vis_026_scatterplot_basic',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
@@ -1079,7 +1079,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'encodes the secondary field. Tasks: Compare group compositions across categories; '
                               'assess the overall range of counts. Query pattern: Make a stacked bar chart of <F1:n> '
                               'and <F2:n>?',
-               'name': 'vis_027_creates_a_vertical_stacked_bar_chart',
+               'name': 'vis_027_stacked_bar_count_vert_stacked_grouped',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
@@ -1095,7 +1095,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'Color encodes the secondary field. Tasks: Compare group compositions across categories; '
                               'assess the overall range of counts. Query pattern: Make a stacked bar chart of <F1:n> '
                               'and <F2:n>?',
-               'name': 'vis_028_creates_a_horizontal_stacked_bar_chart',
+               'name': 'vis_028_stacked_bar_count_horiz_stacked_grouped',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
@@ -1111,7 +1111,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'few categories (<8) where part-to-whole perception is the goal. Tasks: Assess '
                               'part-to-whole proportions; identify the dominant category. Query pattern: Make a pie '
                               'chart of <F:n>?',
-               'name': 'vis_029_creates_a_pie_chart_showing_the',
+               'name': 'vis_029_circular_freq_distribution',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
@@ -1125,7 +1125,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'label readability. Suitable for few categories (<8). Tasks: Assess part-to-whole '
                               'proportions; identify the dominant category. Query pattern: Make a donut chart of '
                               '<F:n>?',
-               'name': 'vis_030_creates_a_donut_chart_showing_the',
+               'name': 'vis_030_circular_freq_distribution',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
@@ -1138,7 +1138,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'single-row table. Design: Simple rollup with no visual encoding beyond the count value. '
                               'Useful as a quick data quality or size check. Tasks: Retrieve the total record count '
                               'for an entity. Query pattern: How many <E> records are there?',
-               'name': 'vis_031_counts_the_total_number_of_records',
+               'name': 'vis_031_table_count',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'}},
@@ -1149,7 +1149,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'aggregation or transformation applied; shows the underlying data as-is. Tasks: Explore '
                               'the raw data; understand field values and ranges. Query pattern: What does the <E> data '
                               'look like?',
-               'name': 'vis_032_displays_the_raw_data_for_an',
+               'name': 'vis_032_table_raw',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'}},
@@ -1160,7 +1160,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'or transformation; presents the full dataset for manual inspection. Tasks: Explore raw '
                               'data; retrieve specific values; identify anomalies and extremes. Query pattern: Make a '
                               'table of <E>?',
-               'name': 'vis_033_creates_a_table_displaying_the_raw',
+               'name': 'vis_033_table_raw',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'}},
@@ -1172,7 +1172,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'Requires a valid foreign-key relationship. Tasks: Explore combined data from two '
                               'related entities; understand field values across the join. Query pattern: What does the '
                               'combined data of <E1> and <E2> look like?',
-               'name': 'vis_034_joins_two_related_entities_and_displays',
+               'name': 'vis_034_table_join',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity1': {'description': 'The primary data entity (table).',
                                                          'type': 'string'},
@@ -1186,7 +1186,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'Design: Cross-entity join via foreign key. Presents the full combined dataset for '
                               'manual inspection. Tasks: Explore joined data; retrieve specific values; identify '
                               'anomalies and extremes. Query pattern: Make a table that combines <E1> and <E2>.',
-               'name': 'vis_035_creates_a_table_that_joins_and',
+               'name': 'vis_035_table_join',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity1': {'description': 'The primary data entity (table).',
                                                          'type': 'string'},
@@ -1201,7 +1201,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'ranks, and highlights the top record with color encoding. Bar marks on the count column '
                               'provide visual comparison. Tasks: Identify the record with the most associated '
                               'entities; compare counts across records. Query pattern: What <E2> has the most <E1>?',
-               'name': 'vis_036_finds_which_related_entity_record_has',
+               'name': 'vis_036_table_join_count_ranked',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity1': {'description': 'The primary data entity (table).',
                                                          'type': 'string'},
@@ -1216,7 +1216,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'a rank, and highlights the top record with color. Bar marks provide visual magnitude '
                               'comparison. Tasks: Identify the record with the largest value; compare values across '
                               'records. Query pattern: What Record in <E> has the largest <F:q>?',
-               'name': 'vis_037_finds_the_record_with_the_largest',
+               'name': 'vis_037_table_ranked',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
@@ -1231,7 +1231,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'the extremum requires aggregation across a relationship. Tasks: Identify which related '
                               'record has the largest aggregated value; compare across groups. Query pattern: What '
                               'Record in <E2> has the largest <E1> <E1.F:q>?',
-               'name': 'vis_038_joins_two_entities_computes_the_maximum',
+               'name': 'vis_038_table_join_max_ranked',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity1': {'description': 'The primary data entity (table).',
                                                          'type': 'string'},
@@ -1249,7 +1249,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'mark for row-level highlighting. Tasks: Identify the record with the smallest value; '
                               'compare values across records. Query pattern: What Record in <E> has the smallest '
                               '<F:q>?',
-               'name': 'vis_039_finds_the_record_with_the_smallest',
+               'name': 'vis_039_table_ranked',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
@@ -1264,7 +1264,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'color via rect mark. Tasks: Identify which related record has the smallest aggregated '
                               'value; compare across groups. Query pattern: What Record in <E2> has the smallest <E1> '
                               '<E1.F:q>?',
-               'name': 'vis_040_joins_two_entities_computes_the_minimum',
+               'name': 'vis_040_table_join_min_ranked',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity1': {'description': 'The primary data entity (table).',
                                                          'type': 'string'},
@@ -1281,7 +1281,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'nulls filtered out. In-cell bar marks provide visual comparison of magnitude alongside '
                               'the text values. Tasks: View records in sorted order; compare relative magnitudes. '
                               'Query pattern: Order the <E> by <F:q>?',
-               'name': 'vis_041_sorts_entity_records_by_a_quantitative',
+               'name': 'vis_041_table_sorted',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
@@ -1294,7 +1294,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'single-row table. Design: Simple rollup of min and max. Filters out nulls before '
                               'aggregation for accuracy. Tasks: Determine the range of a quantitative field. Query '
                               'pattern: What is the range of <E> <F:q> values?',
-               'name': 'vis_042_computes_the_minimum_and_maximum_of',
+               'name': 'vis_042_table_min',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
@@ -1309,7 +1309,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'fewer than 50 categories. Tasks: Determine the range (distinct values) of a nominal '
                               'field; compare category frequencies. Query pattern: What is the range of <E> <F:n> '
                               'values?',
-               'name': 'vis_043_lists_all_distinct_values_of_a',
+               'name': 'vis_043_table_count_distinct',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
@@ -1324,7 +1324,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'to show the span between min and max values. Tasks: Compare the spread of a '
                               'quantitative field across categories; identify which group has the widest or narrowest '
                               'range. Query pattern: What is the range of <E> <F1:q> values for every <F2:n>?',
-               'name': 'vis_044_computes_the_min_and_max_of',
+               'name': 'vis_044_table_range',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
@@ -1340,7 +1340,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'ranks, and highlights the top value. Combines bar marks for count comparison and '
                               'background color for emphasis. Tasks: Identify the most frequent category; compare '
                               'frequencies across all categories. Query pattern: What is the most frequent <F:n>?',
-               'name': 'vis_045_finds_the_most_frequent_value_of',
+               'name': 'vis_045_table_ranked_mode',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
@@ -1354,7 +1354,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'CDF reveals the full distribution shape including median, quartiles, and tails. Tasks: '
                               'Characterize the distribution of a variable; identify median, quartiles, and '
                               'concentration of values. Query pattern: What is the cumulative distribution of <F:q>?',
-               'name': 'vis_046_shows_the_cumulative_distribution_function_cdf',
+               'name': 'vis_046_line_cdf',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
@@ -1367,7 +1367,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'Design: Sorts values, computes cumulative percentile, and renders as a line chart. '
                               'Tasks: Characterize the distribution of a variable; identify median, quartiles, and '
                               'concentration of values. Query pattern: Make a CDF plot of <F:q>.',
-               'name': 'vis_047_creates_a_cdf_cumulative_distribution_function',
+               'name': 'vis_047_line_cdf',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
@@ -1382,7 +1382,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'than 5 groups for readability. Tasks: Compare distributions across groups; identify '
                               'which groups have higher or lower concentrations of values. Query pattern: What is the '
                               'cumulative distribution of <F1:q> for each <F2:n>?',
-               'name': 'vis_048_shows_the_cumulative_distribution_of_a',
+               'name': 'vis_048_grouped_line_cdf',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
@@ -1398,7 +1398,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'Limited to fewer than 5 groups. Tasks: Compare distributions across groups; identify '
                               'which groups have higher or lower concentrations of values. Query pattern: Make a CDF '
                               'plot of <F1:q> with a line for each <F2:n>.',
-               'name': 'vis_049_creates_a_cdf_plot_with_a',
+               'name': 'vis_049_grouped_line_cdf',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
@@ -1415,7 +1415,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'intensity for readability. Tasks: Identify clusters or patterns in the co-occurrence of '
                               'two fields; find the most and least common combinations. Query pattern: Are there any '
                               'clusters with respect to <E> counts of <F1:n> and <F2:n>?',
-               'name': 'vis_050_displays_the_count_of_entities_for',
+               'name': 'vis_050_heatmap_count',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
@@ -1431,7 +1431,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'background intensity. Both axes limited to 30 or fewer categories. Tasks: Identify '
                               'clusters and patterns; compare counts across combinations; find correlations between '
                               'two fields. Query pattern: Make a heatmap of <E> <F1:n> and <F2:n>.',
-               'name': 'vis_051_creates_a_heatmap_showing_entity_counts',
+               'name': 'vis_051_heatmap_count',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
@@ -1448,7 +1448,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'Requires overlapping fields across all three. Tasks: Identify patterns in the average '
                               'value across two categorical dimensions; find combinations with extreme values. Query '
                               'pattern: What is the average <F1:q> for each <F2:n> and <F3:n>?',
-               'name': 'vis_052_displays_the_average_of_a_quantitative',
+               'name': 'vis_052_heatmap_avg',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
@@ -1468,7 +1468,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'assess whether the relationship between two quantitative fields differs across groups. '
                               'Query pattern: Are there clusters of <E> <F1:q> and <F2:q> values across different '
                               '<F3:n> groups?',
-               'name': 'vis_053_plots_two_quantitative_fields_as_a',
+               'name': 'vis_053_grouped_scatter_by_color',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
@@ -1486,7 +1486,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'span from bin start to bin end on x, with count on y. Requires high cardinality (>250) '
                               'to ensure meaningful binning. Tasks: Characterize the shape of a distribution; identify '
                               'modes, skewness, and gaps. Query pattern: What is the distribution of <F:q>?',
-               'name': 'vis_054_shows_the_distribution_of_a_quantitative',
+               'name': 'vis_054_histogram_distribution',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
@@ -1500,7 +1500,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'counts. Lower cardinality threshold (>5) than the question variant. Tasks: Characterize '
                               'the shape of a distribution; identify modes, skewness, and gaps. Query pattern: Make a '
                               'histogram of <F:q>?',
-               'name': 'vis_055_creates_a_histogram_of_a_quantitative',
+               'name': 'vis_055_histogram_basic',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
@@ -1515,7 +1515,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'smooth estimate is more informative than binning. Tasks: Characterize the shape of a '
                               'distribution; identify modes and overall density patterns. Query pattern: What is the '
                               'distribution of <F:q>?',
-               'name': 'vis_056_shows_the_distribution_of_a_quantitative',
+               'name': 'vis_056_area_density',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
@@ -1529,7 +1529,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'datasets (50 or fewer values) where individual observations are meaningful and '
                               'overplotting is minimal. Tasks: Characterize the distribution; identify individual '
                               'values, clusters, and outliers. Query pattern: What is the distribution of <F:q>?',
-               'name': 'vis_057_shows_the_distribution_of_a_quantitative',
+               'name': 'vis_057_dot_distribution',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
@@ -1545,7 +1545,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'layering. Tasks: Compare distribution shapes across groups; identify shifts in central '
                               'tendency or spread. Query pattern: Is the distribution of <F1:q> similar for each '
                               '<F2:n>?',
-               'name': 'vis_058_compares_the_distribution_of_a_quantitative',
+               'name': 'vis_058_grouped_area_density',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
@@ -1562,7 +1562,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'small datasets (50 or fewer values per group). Tasks: Compare distributions across '
                               'groups; identify clusters and outliers within each group. Query pattern: Is the '
                               'distribution of <F1:q> similar for each <F2:n>?',
-               'name': 'vis_059_compares_the_distribution_of_a_quantitative',
+               'name': 'vis_059_grouped_dot_distribution',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
@@ -1579,7 +1579,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'reference line provide visual context for data completeness. Tasks: Assess data '
                               'completeness for a field; determine how many records have valid values. Query pattern: '
                               'How many <E> records have a non-null <F:q|o|n>?',
-               'name': 'vis_060_counts_the_number_of_records_with',
+               'name': 'vis_060_table_count_null_nonnull',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
@@ -1594,7 +1594,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'Tasks: Assess data completeness as a proportion; determine what fraction of records '
                               'have valid values. Query pattern: What percentage of <E> records have a non-null '
                               '<F:q|o|n>?',
-               'name': 'vis_061_computes_the_percentage_of_records_with',
+               'name': 'vis_061_table_pct_null_nonnull',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
@@ -1608,7 +1608,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'valid count. Percentage bar shows the null proportion with a 50%% reference line. '
                               'Tasks: Assess data quality; determine how many records are missing a value. Query '
                               'pattern: How many <E> records have a null <F:q|o|n>?',
-               'name': 'vis_062_counts_the_number_of_records_with',
+               'name': 'vis_062_table_count_null',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
@@ -1622,7 +1622,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'percentage. Percentage bar visualizes the null proportion. Tasks: Assess data quality '
                               'as a proportion; determine what fraction of records are missing a value. Query pattern: '
                               'What percentage of <E> records have a null <F:q|o|n>?',
-               'name': 'vis_063_computes_the_percentage_of_records_with',
+               'name': 'vis_063_table_pct_null',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
@@ -1634,76 +1634,75 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
 
 
 # Dispatch: tool name -> (template_index, param_to_binding_map)
-TOOL_DISPATCH = {'vis_000_counts_entities_grouped_by_a_nominal': (0, {'entity': 'E', 'field': 'F'}),
- 'vis_001_counts_entities_grouped_by_a_nominal': (1, {'entity': 'E', 'field': 'F'}),
- 'vis_002_creates_a_vertical_bar_chart_counting': (2, {'entity': 'E', 'field': 'F'}),
- 'vis_003_creates_a_horizontal_bar_chart_counting': (3, {'entity': 'E', 'field': 'F'}),
- 'vis_004_joins_two_entities_and_counts_records': (4, {'entity1': 'E1', 'entity2': 'E2', 'entity2_field': 'E2.F'}),
- 'vis_005_joins_two_entities_and_counts_records': (5, {'entity1': 'E1', 'entity2': 'E2', 'entity2_field': 'E2.F'}),
- 'vis_006_joins_two_entities_and_produces_a': (6,
-                                               {'entity1': 'E1',
-                                                'entity1_field': 'E1.F1',
-                                                'entity2': 'E2',
-                                                'entity2_field': 'E2.F2'}),
- 'vis_007_joins_two_entities_and_produces_a': (7,
-                                               {'entity1': 'E1',
-                                                'entity1_field': 'E1.F1',
-                                                'entity2': 'E2',
-                                                'entity2_field': 'E2.F2'}),
- 'vis_008_counts_entities_grouped_by_two_nominal': (8, {'entity': 'E', 'field1': 'F1', 'field2': 'F2'}),
- 'vis_009_counts_entities_grouped_by_two_nominal': (9, {'entity': 'E', 'field1': 'F1', 'field2': 'F2'}),
- 'vis_010_counts_entities_grouped_by_two_nominal': (10, {'entity': 'E', 'field1': 'F1', 'field2': 'F2'}),
- 'vis_011_counts_entities_grouped_by_two_nominal': (11, {'entity': 'E', 'field1': 'F1', 'field2': 'F2'}),
- 'vis_012_counts_entities_grouped_by_two_nominal': (12, {'entity': 'E', 'field1': 'F1', 'field2': 'F2'}),
- 'vis_013_shows_the_frequency_proportion_of_one': (13, {'entity': 'E', 'field1': 'F1', 'field2': 'F2'}),
- 'vis_014_shows_the_frequency_proportion_of_one': (14, {'entity': 'E', 'field1': 'F1', 'field2': 'F2'}),
- 'vis_015_computes_the_minimum_of_a_quantitative': (15, {'entity': 'E', 'field1': 'F1', 'field2': 'F2'}),
- 'vis_016_computes_the_minimum_of_a_quantitative': (16, {'entity': 'E', 'field1': 'F1', 'field2': 'F2'}),
- 'vis_017_computes_the_maximum_of_a_quantitative': (17, {'entity': 'E', 'field1': 'F1', 'field2': 'F2'}),
- 'vis_018_computes_the_maximum_of_a_quantitative': (18, {'entity': 'E', 'field1': 'F1', 'field2': 'F2'}),
- 'vis_019_computes_the_average_of_a_quantitative': (19, {'entity': 'E', 'field1': 'F1', 'field2': 'F2'}),
- 'vis_020_computes_the_average_of_a_quantitative': (20, {'entity': 'E', 'field1': 'F1', 'field2': 'F2'}),
- 'vis_021_computes_the_median_of_a_quantitative': (21, {'entity': 'E', 'field1': 'F1', 'field2': 'F2'}),
- 'vis_022_computes_the_median_of_a_quantitative': (22, {'entity': 'E', 'field1': 'F1', 'field2': 'F2'}),
- 'vis_023_computes_the_total_of_a_quantitative': (23, {'entity': 'E', 'field1': 'F1', 'field2': 'F2'}),
- 'vis_024_computes_the_total_of_a_quantitative': (24, {'entity': 'E', 'field1': 'F1', 'field2': 'F2'}),
- 'vis_025_plots_two_quantitative_fields_as_a': (25, {'entity': 'E', 'field1': 'F1', 'field2': 'F2'}),
- 'vis_026_creates_a_scatterplot_of_two_quantitative': (26, {'entity': 'E', 'field1': 'F1', 'field2': 'F2'}),
- 'vis_027_creates_a_vertical_stacked_bar_chart': (27, {'entity': 'E', 'field1': 'F1', 'field2': 'F2'}),
- 'vis_028_creates_a_horizontal_stacked_bar_chart': (28, {'entity': 'E', 'field1': 'F1', 'field2': 'F2'}),
- 'vis_029_creates_a_pie_chart_showing_the': (29, {'entity': 'E', 'field': 'F'}),
- 'vis_030_creates_a_donut_chart_showing_the': (30, {'entity': 'E', 'field': 'F'}),
- 'vis_031_counts_the_total_number_of_records': (31, {'entity': 'E'}),
- 'vis_032_displays_the_raw_data_for_an': (32, {'entity': 'E'}),
- 'vis_033_creates_a_table_displaying_the_raw': (33, {'entity': 'E'}),
- 'vis_034_joins_two_related_entities_and_displays': (34, {'entity1': 'E1', 'entity2': 'E2'}),
- 'vis_035_creates_a_table_that_joins_and': (35, {'entity1': 'E1', 'entity2': 'E2'}),
- 'vis_036_finds_which_related_entity_record_has': (36, {'entity1': 'E1', 'entity2': 'E2'}),
- 'vis_037_finds_the_record_with_the_largest': (37, {'entity': 'E', 'field': 'F'}),
- 'vis_038_joins_two_entities_computes_the_maximum': (38, {'entity1': 'E1', 'entity1_field': 'E1.F', 'entity2': 'E2'}),
- 'vis_039_finds_the_record_with_the_smallest': (39, {'entity': 'E', 'field': 'F'}),
- 'vis_040_joins_two_entities_computes_the_minimum': (40, {'entity1': 'E1', 'entity1_field': 'E1.F', 'entity2': 'E2'}),
- 'vis_041_sorts_entity_records_by_a_quantitative': (41, {'entity': 'E', 'field': 'F'}),
- 'vis_042_computes_the_minimum_and_maximum_of': (42, {'entity': 'E', 'field': 'F'}),
- 'vis_043_lists_all_distinct_values_of_a': (43, {'entity': 'E', 'field': 'F'}),
- 'vis_044_computes_the_min_and_max_of': (44, {'entity': 'E', 'field1': 'F1', 'field2': 'F2'}),
- 'vis_045_finds_the_most_frequent_value_of': (45, {'entity': 'E', 'field': 'F'}),
- 'vis_046_shows_the_cumulative_distribution_function_cdf': (46, {'entity': 'E', 'field': 'F'}),
- 'vis_047_creates_a_cdf_cumulative_distribution_function': (47, {'entity': 'E', 'field': 'F'}),
- 'vis_048_shows_the_cumulative_distribution_of_a': (48, {'entity': 'E', 'field1': 'F1', 'field2': 'F2'}),
- 'vis_049_creates_a_cdf_plot_with_a': (49, {'entity': 'E', 'field1': 'F1', 'field2': 'F2'}),
- 'vis_050_displays_the_count_of_entities_for': (50, {'entity': 'E', 'field1': 'F1', 'field2': 'F2'}),
- 'vis_051_creates_a_heatmap_showing_entity_counts': (51, {'entity': 'E', 'field1': 'F1', 'field2': 'F2'}),
- 'vis_052_displays_the_average_of_a_quantitative': (52,
-                                                    {'entity': 'E', 'field1': 'F1', 'field2': 'F2', 'field3': 'F3'}),
- 'vis_053_plots_two_quantitative_fields_as_a': (53, {'entity': 'E', 'field1': 'F1', 'field2': 'F2', 'field3': 'F3'}),
- 'vis_054_shows_the_distribution_of_a_quantitative': (54, {'entity': 'E', 'field': 'F'}),
- 'vis_055_creates_a_histogram_of_a_quantitative': (55, {'entity': 'E', 'field': 'F'}),
- 'vis_056_shows_the_distribution_of_a_quantitative': (56, {'entity': 'E', 'field': 'F'}),
- 'vis_057_shows_the_distribution_of_a_quantitative': (57, {'entity': 'E', 'field': 'F'}),
- 'vis_058_compares_the_distribution_of_a_quantitative': (58, {'entity': 'E', 'field1': 'F1', 'field2': 'F2'}),
- 'vis_059_compares_the_distribution_of_a_quantitative': (59, {'entity': 'E', 'field1': 'F1', 'field2': 'F2'}),
- 'vis_060_counts_the_number_of_records_with': (60, {'entity': 'E', 'field': 'F'}),
- 'vis_061_computes_the_percentage_of_records_with': (61, {'entity': 'E', 'field': 'F'}),
- 'vis_062_counts_the_number_of_records_with': (62, {'entity': 'E', 'field': 'F'}),
- 'vis_063_computes_the_percentage_of_records_with': (63, {'entity': 'E', 'field': 'F'})}
+TOOL_DISPATCH = {'vis_000_barchart_count_vert_grouped': (0, {'entity': 'E', 'field': 'F'}),
+ 'vis_001_barchart_count_horiz_grouped': (1, {'entity': 'E', 'field': 'F'}),
+ 'vis_002_barchart_count_vert': (2, {'entity': 'E', 'field': 'F'}),
+ 'vis_003_barchart_count_horiz': (3, {'entity': 'E', 'field': 'F'}),
+ 'vis_004_barchart_join_count_vert_grouped': (4, {'entity1': 'E1', 'entity2': 'E2', 'entity2_field': 'E2.F'}),
+ 'vis_005_barchart_join_count_horiz_grouped': (5, {'entity1': 'E1', 'entity2': 'E2', 'entity2_field': 'E2.F'}),
+ 'vis_006_stacked_bar_join_count_vert_stacked_grouped': (6,
+                                                         {'entity1': 'E1',
+                                                          'entity1_field': 'E1.F1',
+                                                          'entity2': 'E2',
+                                                          'entity2_field': 'E2.F2'}),
+ 'vis_007_stacked_bar_join_count_horiz_stacked_grouped': (7,
+                                                          {'entity1': 'E1',
+                                                           'entity1_field': 'E1.F1',
+                                                           'entity2': 'E2',
+                                                           'entity2_field': 'E2.F2'}),
+ 'vis_008_stacked_bar_count_vert_stacked_grouped': (8, {'entity': 'E', 'field1': 'F1', 'field2': 'F2'}),
+ 'vis_009_stacked_bar_count_horiz_stacked_grouped': (9, {'entity': 'E', 'field1': 'F1', 'field2': 'F2'}),
+ 'vis_010_stacked_bar_count_vert_grouped': (10, {'entity': 'E', 'field1': 'F1', 'field2': 'F2'}),
+ 'vis_011_stacked_bar_count_horiz_grouped': (11, {'entity': 'E', 'field1': 'F1', 'field2': 'F2'}),
+ 'vis_012_stacked_bar_count_horiz_stacked_grouped': (12, {'entity': 'E', 'field1': 'F1', 'field2': 'F2'}),
+ 'vis_013_stacked_bar_freq_vert_normalized': (13, {'entity': 'E', 'field1': 'F1', 'field2': 'F2'}),
+ 'vis_014_stacked_bar_freq_horiz_normalized': (14, {'entity': 'E', 'field1': 'F1', 'field2': 'F2'}),
+ 'vis_015_barchart_min_horiz': (15, {'entity': 'E', 'field1': 'F1', 'field2': 'F2'}),
+ 'vis_016_barchart_min_vert': (16, {'entity': 'E', 'field1': 'F1', 'field2': 'F2'}),
+ 'vis_017_barchart_max_horiz': (17, {'entity': 'E', 'field1': 'F1', 'field2': 'F2'}),
+ 'vis_018_barchart_max_vert': (18, {'entity': 'E', 'field1': 'F1', 'field2': 'F2'}),
+ 'vis_019_barchart_avg_horiz': (19, {'entity': 'E', 'field1': 'F1', 'field2': 'F2'}),
+ 'vis_020_barchart_avg_vert': (20, {'entity': 'E', 'field1': 'F1', 'field2': 'F2'}),
+ 'vis_021_barchart_median_horiz': (21, {'entity': 'E', 'field1': 'F1', 'field2': 'F2'}),
+ 'vis_022_barchart_median_vert': (22, {'entity': 'E', 'field1': 'F1', 'field2': 'F2'}),
+ 'vis_023_barchart_sum_horiz': (23, {'entity': 'E', 'field1': 'F1', 'field2': 'F2'}),
+ 'vis_024_barchart_sum_vert': (24, {'entity': 'E', 'field1': 'F1', 'field2': 'F2'}),
+ 'vis_025_scatterplot_basic': (25, {'entity': 'E', 'field1': 'F1', 'field2': 'F2'}),
+ 'vis_026_scatterplot_basic': (26, {'entity': 'E', 'field1': 'F1', 'field2': 'F2'}),
+ 'vis_027_stacked_bar_count_vert_stacked_grouped': (27, {'entity': 'E', 'field1': 'F1', 'field2': 'F2'}),
+ 'vis_028_stacked_bar_count_horiz_stacked_grouped': (28, {'entity': 'E', 'field1': 'F1', 'field2': 'F2'}),
+ 'vis_029_circular_freq_distribution': (29, {'entity': 'E', 'field': 'F'}),
+ 'vis_030_circular_freq_distribution': (30, {'entity': 'E', 'field': 'F'}),
+ 'vis_031_table_count': (31, {'entity': 'E'}),
+ 'vis_032_table_raw': (32, {'entity': 'E'}),
+ 'vis_033_table_raw': (33, {'entity': 'E'}),
+ 'vis_034_table_join': (34, {'entity1': 'E1', 'entity2': 'E2'}),
+ 'vis_035_table_join': (35, {'entity1': 'E1', 'entity2': 'E2'}),
+ 'vis_036_table_join_count_ranked': (36, {'entity1': 'E1', 'entity2': 'E2'}),
+ 'vis_037_table_ranked': (37, {'entity': 'E', 'field': 'F'}),
+ 'vis_038_table_join_max_ranked': (38, {'entity1': 'E1', 'entity1_field': 'E1.F', 'entity2': 'E2'}),
+ 'vis_039_table_ranked': (39, {'entity': 'E', 'field': 'F'}),
+ 'vis_040_table_join_min_ranked': (40, {'entity1': 'E1', 'entity1_field': 'E1.F', 'entity2': 'E2'}),
+ 'vis_041_table_sorted': (41, {'entity': 'E', 'field': 'F'}),
+ 'vis_042_table_min': (42, {'entity': 'E', 'field': 'F'}),
+ 'vis_043_table_count_distinct': (43, {'entity': 'E', 'field': 'F'}),
+ 'vis_044_table_range': (44, {'entity': 'E', 'field1': 'F1', 'field2': 'F2'}),
+ 'vis_045_table_ranked_mode': (45, {'entity': 'E', 'field': 'F'}),
+ 'vis_046_line_cdf': (46, {'entity': 'E', 'field': 'F'}),
+ 'vis_047_line_cdf': (47, {'entity': 'E', 'field': 'F'}),
+ 'vis_048_grouped_line_cdf': (48, {'entity': 'E', 'field1': 'F1', 'field2': 'F2'}),
+ 'vis_049_grouped_line_cdf': (49, {'entity': 'E', 'field1': 'F1', 'field2': 'F2'}),
+ 'vis_050_heatmap_count': (50, {'entity': 'E', 'field1': 'F1', 'field2': 'F2'}),
+ 'vis_051_heatmap_count': (51, {'entity': 'E', 'field1': 'F1', 'field2': 'F2'}),
+ 'vis_052_heatmap_avg': (52, {'entity': 'E', 'field1': 'F1', 'field2': 'F2', 'field3': 'F3'}),
+ 'vis_053_grouped_scatter_by_color': (53, {'entity': 'E', 'field1': 'F1', 'field2': 'F2', 'field3': 'F3'}),
+ 'vis_054_histogram_distribution': (54, {'entity': 'E', 'field': 'F'}),
+ 'vis_055_histogram_basic': (55, {'entity': 'E', 'field': 'F'}),
+ 'vis_056_area_density': (56, {'entity': 'E', 'field': 'F'}),
+ 'vis_057_dot_distribution': (57, {'entity': 'E', 'field': 'F'}),
+ 'vis_058_grouped_area_density': (58, {'entity': 'E', 'field1': 'F1', 'field2': 'F2'}),
+ 'vis_059_grouped_dot_distribution': (59, {'entity': 'E', 'field1': 'F1', 'field2': 'F2'}),
+ 'vis_060_table_count_null_nonnull': (60, {'entity': 'E', 'field': 'F'}),
+ 'vis_061_table_pct_null_nonnull': (61, {'entity': 'E', 'field': 'F'}),
+ 'vis_062_table_count_null': (62, {'entity': 'E', 'field': 'F'}),
+ 'vis_063_table_pct_null': (63, {'entity': 'E', 'field': 'F'})}

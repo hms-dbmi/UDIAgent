@@ -120,11 +120,65 @@ def _extract_placeholders(template_str: str) -> set[str]:
 
 
 def _derive_tool_name(template: dict, index: int) -> str:
-    """Derive a tool function name from chart_type + description."""
-    desc = template.get("description", "")
-    words = re.sub(r'[^a-zA-Z0-9\s]', '', desc).lower().split()
-    name_part = "_".join(words[:6]) or template.get("chart_type", "chart")
-    return f"vis_{index:03d}_{re.sub(r'[^a-z0-9_]', '', name_part)}"
+    """Derive a meaningful tool name from chart_type + description keywords."""
+    chart_type = template.get("chart_type", "chart").lower()
+    desc = template.get("description", "").lower()
+
+    suffixes = []
+
+    # Detect join/cross-entity
+    if "join" in desc or "related entity" in desc:
+        suffixes.append("join")
+
+    # Detect aggregation
+    agg_keywords = ["count", "average", "mean", "median", "minimum", "maximum",
+                     "total", "sum", "frequency", "proportion", "percentage"]
+    for kw in agg_keywords:
+        if kw in desc:
+            suffixes.append({"minimum": "min", "maximum": "max", "average": "avg",
+                             "mean": "avg", "total": "sum", "frequency": "freq",
+                             "proportion": "proportion", "percentage": "pct"}.get(kw, kw))
+            break
+
+    # Detect layout/style modifiers
+    if "horizontal" in desc:
+        suffixes.append("horiz")
+    elif "vertical" in desc:
+        suffixes.append("vert")
+    if "stacked" in desc:
+        suffixes.append("stacked")
+    if "grouped" in desc or "side-by-side" in desc:
+        suffixes.append("grouped")
+    if "normalized" in desc:
+        suffixes.append("normalized")
+    if "color" in desc or "colored" in desc:
+        suffixes.append("by_color")
+    if "cumulative" in desc or "cdf" in desc:
+        suffixes.append("cdf")
+    if "density" in desc or "kde" in desc:
+        suffixes.append("density")
+    if "distribution" in desc and "cdf" not in suffixes and "density" not in suffixes:
+        suffixes.append("distribution")
+    if "ranked" in desc or "rank" in desc:
+        suffixes.append("ranked")
+    if "sorted" in desc or "ordered" in desc:
+        suffixes.append("sorted")
+    if "raw data" in desc or "raw" in desc:
+        suffixes.append("raw")
+    if "null" in desc:
+        suffixes.append("null")
+    if "non-null" in desc:
+        suffixes.append("nonnull")
+    if "min and max" in desc or "min/max" in desc:
+        suffixes.append("range")
+    if "distinct" in desc:
+        suffixes.append("distinct")
+    if "most frequent" in desc:
+        suffixes.append("mode")
+
+    suffix = "_".join(suffixes) if suffixes else "basic"
+    name = f"vis_{index:03d}_{chart_type}_{suffix}"
+    return re.sub(r'[^a-z0-9_]', '', name)
 
 
 def _build_tool_description(template: dict) -> str:
