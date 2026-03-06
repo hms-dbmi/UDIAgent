@@ -270,11 +270,58 @@ def _parse_and_validate(spec_str, schema_dict):
 # ---------------------------------------------------------------------------
 
 
+def _resolve_placeholder(tag, bindings, schema):
+    """Resolve a single <tag> placeholder using bindings and schema."""
+    # Entity URL: E.url, E1.url, E2.url
+    if tag.endswith(".url"):
+        entity_key = tag[:-4]
+        entity_name = bindings.get(entity_key, "")
+        return schema.get("entities", {}).get(entity_name, {}).get("url", "")
+
+    # Relationship join keys: E1.r.E2.id.from, E1.r.E2.id.to
+    if ".r." in tag and ".id." in tag:
+        parts = tag.split(".")
+        e1_name = bindings.get(parts[0], "")
+        e2_name = bindings.get(parts[2], "")
+        direction = parts[4]  # "from" or "to"
+        for rel in schema.get("relationships", []):
+            if rel["from_entity"] == e1_name and rel["to_entity"] == e2_name:
+                return rel["from_field"] if direction == "from" else rel["to_field"]
+            if rel["from_entity"] == e2_name and rel["to_entity"] == e1_name:
+                return rel["to_field"] if direction == "from" else rel["from_field"]
+        return ""
+
+    # Strip type suffix: F:n -> F, E1.F:q -> E1.F
+    base = tag.split(":")[0] if ":" in tag else tag
+
+    return bindings.get(base, "")
+
+
+def instantiate_template(spec_template, bindings, schema):
+    """Resolve all <placeholder> tags in a spec template.
+
+    Args:
+        spec_template: Template string with <E>, <F:n>, <E.url>, etc.
+        bindings: Maps abstract names to real names, e.g. {"E": "donors", "F": "sex"}
+        schema: Dict with "entities" (name -> {"url": ...}) and "relationships".
+
+    Returns: Parsed spec dict.
+    """
+    spec = spec_template
+    while True:
+        match = re.search(r"<([^>]+)>", spec)
+        if not match:
+            break
+        resolved = _resolve_placeholder(match.group(1), bindings, schema)
+        spec = spec.replace(match.group(0), resolved, 1)
+    return json.loads(spec)
+
+
 def _load_generated_tools():
-    """Load generated tool definitions and builders. Returns (tool_defs, builders, schema) or None."""
+    """Load generated tool data. Returns (tool_defs, tool_dispatch, templates, schema) or None."""
     try:
-        from generated_vis_tools import TOOL_DEFS, TOOL_BUILDERS, SCHEMA
-        return TOOL_DEFS, TOOL_BUILDERS, SCHEMA
+        from generated_vis_tools import TOOL_DEFS, TOOL_DISPATCH, TEMPLATES, SCHEMA
+        return TOOL_DEFS, TOOL_DISPATCH, TEMPLATES, SCHEMA
     except ImportError:
         return None
 
@@ -291,7 +338,7 @@ def _execute_generate(skill, context):
     # --- Primary path: function-calling with generated tools ---
     generated = _load_generated_tools()
     if generated is not None and backend == "gpt":
-        tool_defs, tool_builders, tool_schema = generated
+        tool_defs, tool_dispatch, templates, tool_schema = generated
 
         # Build system prompt with data schema context
         system_msg = (
@@ -305,14 +352,17 @@ def _execute_generate(skill, context):
         result = _call_llm_with_tools(agent, tool_messages, tool_defs, config)
         if result is not None:
             tool_name, tool_args = result
-            builder = tool_builders.get(tool_name)
-            if builder is not None:
+            dispatch = tool_dispatch.get(tool_name)
+            if dispatch is not None:
+                template_idx, param_map = dispatch
+                bindings = {param_map[k]: v for k, v in tool_args.items() if k in param_map}
                 try:
-                    spec_dict = builder(**tool_args, _schema=tool_schema)
+                    spec_dict = instantiate_template(templates[template_idx], bindings, tool_schema)
                     spec_str = json.dumps(spec_dict)
                     context["spec_str"] = spec_str
                     context["gen_messages"] = tool_messages
                     context["tool_used"] = tool_name
+                    context["tool_args"] = tool_args
                     return context
                 except Exception:
                     pass  # Fall through to LLM generation
@@ -337,6 +387,7 @@ def _execute_generate(skill, context):
     context["spec_str"] = spec_str
     context["gen_messages"] = gen_messages
     context["tool_used"] = None
+    context["tool_args"] = None
     return context
 
 
@@ -546,11 +597,17 @@ def generate_vis_spec(agent, messages, data_schema, grammar, config=None):
     plan = ["generate", "validate"]
     context = run_skills(plan, context, registry)
 
+    spec = context["spec_dict"] if context["spec_dict"] is not None else context["spec_str"]
+    if not isinstance(spec, str):
+        spec = json.dumps(spec)
+
     return {
-        "spec": context["spec_dict"]
-        if context["spec_dict"] is not None
-        else context["spec_str"],
+        "spec": spec,
         "valid": context["valid"],
         "errors": context["errors"],
         "corrections": context["corrections"],
+        "meta": {
+            "tool_used": context.get("tool_used"),
+            "tool_args": context.get("tool_args"),
+        },
     }
