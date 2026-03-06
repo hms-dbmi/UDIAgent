@@ -481,6 +481,7 @@ def _execute_generate(skill, context):
                 context["gen_messages"] = tool_messages
                 context["tool_used"] = tool_name
                 context["tool_args"] = tool_args
+                context["validation_retries"] = _attempt
                 return context
             except Exception:
                 break  # Fall through to LLM generation
@@ -727,5 +728,6 @@ def generate_vis_spec(agent, messages, data_schema, grammar, config=None):
         "meta": {
             "tool_used": context.get("tool_used"),
             "tool_args": context.get("tool_args"),
+            "validation_retries": context.get("validation_retries", 0),
         },
     }
