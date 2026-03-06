@@ -399,14 +399,14 @@ TEMPLATES = ['{"source": {"name": "<E>", "source": "<E.url>"}, "transformation":
  '{"source": {"name": "<E>", "source": "<E.url>"}, "transformation": [{"groupby": "<F2>", "out": "groupCounts"}, '
  '{"rollup": {"<F2>_count": {"op": "count"}}}, {"groupby": ["<F1>", "<F2>"], "in": "<E>"}, {"rollup": '
  '{"<F1>_and_<F2>_count": {"op": "count"}}}, {"join": {"on": "<F2>"}, "in": ["<E>", "groupCounts"], "out": '
- '"datasets"}, {"derive": {"frequency": "d[\'<F1>_and_<F2>_count\'] / d[\'<F2>_count\']"}}], "representation": '
- '{"mark": "bar", "mapping": [{"encoding": "y", "field": "frequency", "type": "quantitative"}, {"encoding": "color", '
+ '"datasets"}, {"derive": {"proportion": "d[\'<F1>_and_<F2>_count\'] / d[\'<F2>_count\']"}}], "representation": '
+ '{"mark": "bar", "mapping": [{"encoding": "y", "field": "proportion", "type": "quantitative"}, {"encoding": "color", '
  '"field": "<F1>", "type": "nominal"}, {"encoding": "x", "field": "<F2>", "type": "nominal"}]}}',
  '{"source": {"name": "<E>", "source": "<E.url>"}, "transformation": [{"groupby": "<F2>", "out": "groupCounts"}, '
  '{"rollup": {"<F2>_count": {"op": "count"}}}, {"groupby": ["<F1>", "<F2>"], "in": "<E>"}, {"rollup": '
  '{"<F1>_and_<F2>_count": {"op": "count"}}}, {"join": {"on": "<F2>"}, "in": ["<E>", "groupCounts"], "out": '
- '"datasets"}, {"derive": {"frequency": "d[\'<F1>_and_<F2>_count\'] / d[\'<F2>_count\']"}}], "representation": '
- '{"mark": "bar", "mapping": [{"encoding": "x", "field": "frequency", "type": "quantitative"}, {"encoding": "color", '
+ '"datasets"}, {"derive": {"proportion": "d[\'<F1>_and_<F2>_count\'] / d[\'<F2>_count\']"}}], "representation": '
+ '{"mark": "bar", "mapping": [{"encoding": "x", "field": "proportion", "type": "quantitative"}, {"encoding": "color", '
  '"field": "<F1>", "type": "nominal"}, {"encoding": "y", "field": "<F2>", "type": "nominal"}]}}',
  '{"source": {"name": "<E>", "source": "<E.url>"}, "transformation": [{"groupby": "<F2>"}, {"rollup": {"minimum <F1>": '
  '{"op": "min", "field": "<F1>"}}}], "representation": {"mark": "bar", "mapping": [{"encoding": "x", "field": "minimum '
@@ -448,11 +448,11 @@ TEMPLATES = ['{"source": {"name": "<E>", "source": "<E.url>"}, "transformation":
  '{"count": {"op": "count"}}}], "representation": {"mark": "bar", "mapping": [{"encoding": "x", "field": "count", '
  '"type": "quantitative"}, {"encoding": "y", "field": "<F1>", "type": "nominal"}, {"encoding": "color", "field": '
  '"<F2>", "type": "nominal"}]}}',
- '{"source": {"name": "<E>", "source": "<E.url>"}, "transformation": [{"groupby": "<F>"}, {"rollup": {"frequency": '
- '{"op": "frequency"}}}], "representation": {"mark": "arc", "mapping": [{"encoding": "theta", "field": "frequency", '
+ '{"source": {"name": "<E>", "source": "<E.url>"}, "transformation": [{"groupby": "<F>"}, {"rollup": {"proportion": '
+ '{"op": "frequency"}}}], "representation": {"mark": "arc", "mapping": [{"encoding": "theta", "field": "proportion", '
  '"type": "quantitative"}, {"encoding": "color", "field": "<F>", "type": "nominal"}]}}',
- '{"source": {"name": "<E>", "source": "<E.url>"}, "transformation": [{"groupby": "<F>"}, {"rollup": {"frequency": '
- '{"op": "frequency"}}}], "representation": {"mark": "arc", "mapping": [{"encoding": "theta", "field": "frequency", '
+ '{"source": {"name": "<E>", "source": "<E.url>"}, "transformation": [{"groupby": "<F>"}, {"rollup": {"proportion": '
+ '{"op": "frequency"}}}], "representation": {"mark": "arc", "mapping": [{"encoding": "theta", "field": "proportion", '
  '"type": "quantitative"}, {"encoding": "color", "field": "<F>", "type": "nominal"}, {"encoding": "radius", "value": '
  '60}, {"encoding": "radius2", "value": 80}]}}',
  '{"source": {"name": "<E>", "source": "<E.url>"}, "transformation": [{"rollup": {"<E> Records": {"op": "count"}}}]}',
@@ -619,7 +619,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'entity, displayed as a vertical bar chart. Design: Cross-entity join groups by a field '
                               'not native to the counted entity. Vertical orientation for small category counts (<=4). '
                               'Tasks: Compare counts across categories from a related entity; discover cross-entity '
-                              'frequency patterns. Query patterns: How many <E1> are there, grouped by <E2.F:n>?',
+                              'distribution patterns. Query patterns: How many <E1> are there, grouped by <E2.F:n>?',
                'name': 'vis_002_barchart_join_count_vert_grouped',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity1': {'description': 'The primary data entity (table).',
@@ -635,7 +635,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
  {'function': {'description': '[barchart] Joins two entities and counts records grouped by a field from the related '
                               'entity, displayed as a horizontal bar chart. Design: Cross-entity join with horizontal '
                               'orientation for higher category counts (>4). Tasks: Compare counts across categories '
-                              'from a related entity; discover cross-entity frequency patterns. Query patterns: How '
+                              'from a related entity; discover cross-entity distribution patterns. Query patterns: How '
                               'many <E1> are there, grouped by <E2.F:n>?',
                'name': 'vis_003_barchart_join_count_horiz_grouped',
                'parameters': {'additionalProperties': False,
@@ -652,9 +652,10 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
  {'function': {'description': '[stacked_bar] Joins two entities and produces a vertical stacked bar chart of counts '
                               'grouped by two nominal fields. Design: Stacked bars show part-to-whole composition '
                               'within each category. Vertical layout for small category counts (<=4). Color encodes '
-                              'the secondary grouping field from the related entity. Tasks: Compare group compositions '
-                              'across categories; identify dominant sub-groups within each bar. Query patterns: How '
-                              'many <E1> are there, grouped by <E1.F1:n> and <E2.F2:n>?',
+                              'the secondary grouping field from the related entity. Color is preferably mapped to the '
+                              'variable with fewer unique values for better discriminability. Tasks: Compare group '
+                              'compositions across categories; identify dominant sub-groups within each bar. Query '
+                              'patterns: How many <E1> are there, grouped by <E1.F1:n> and <E2.F2:n>?',
                'name': 'vis_004_stacked_bar_join_count_vert_stacked_grouped',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity1': {'description': 'The primary data entity (table).',
@@ -672,9 +673,10 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
  {'function': {'description': '[stacked_bar] Joins two entities and produces a horizontal stacked bar chart of counts '
                               'grouped by two nominal fields. Design: Horizontal orientation for higher category '
                               'counts (>4). Color encodes the primary grouping field. Cross-entity join required. '
-                              'Tasks: Compare group compositions across categories; identify dominant sub-groups '
-                              'within each bar. Query patterns: How many <E1> are there, grouped by <E1.F1:n> and '
-                              '<E2.F2:n>?',
+                              'Color is preferably mapped to the variable with fewer unique values for better '
+                              'discriminability. Tasks: Compare group compositions across categories; identify '
+                              'dominant sub-groups within each bar. Query patterns: How many <E1> are there, grouped '
+                              'by <E1.F1:n> and <E2.F2:n>?',
                'name': 'vis_005_stacked_bar_join_count_horiz_stacked_grouped',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity1': {'description': 'The primary data entity (table).',
@@ -691,9 +693,10 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
   'type': 'function'},
  {'function': {'description': '[stacked_bar] Counts entities grouped by two nominal fields, displayed as a vertical '
                               'stacked bar chart. Design: Vertical stacked layout for small category counts (<=4). '
-                              'Color encodes the sub-group field; x-axis shows the primary grouping. Tasks: Compare '
-                              'group compositions across categories; identify dominant sub-groups within each bar. '
-                              'Query patterns: How many <E> are there, grouped by <F1:n> and <F2:n>?',
+                              'Color encodes the sub-group field; x-axis shows the primary grouping. Color is '
+                              'preferably mapped to the variable with fewer unique values for better discriminability. '
+                              'Tasks: Compare group compositions across categories; identify dominant sub-groups '
+                              'within each bar. Query patterns: How many <E> are there, grouped by <F1:n> and <F2:n>?',
                'name': 'vis_006_stacked_bar_count_vert_stacked_grouped',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
@@ -707,10 +710,11 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
   'type': 'function'},
  {'function': {'description': '[stacked_bar] Counts entities grouped by two nominal fields, displayed as a horizontal '
                               'stacked bar chart. Design: Horizontal stacked layout for higher category counts (>4). '
-                              'Color encodes the sub-group; stacking shows part-to-whole within each bar. Tasks: '
-                              'Compare group compositions across categories; identify dominant sub-groups within each '
-                              'bar. Query patterns: How many <E> are there, grouped by <F1:n> and <F2:n>?; What is the '
-                              'count of <F1:n> for each <F2:n>?',
+                              'Color encodes the sub-group; stacking shows part-to-whole within each bar. Color is '
+                              'preferably mapped to the variable with fewer unique values for better discriminability. '
+                              'Tasks: Compare group compositions across categories; identify dominant sub-groups '
+                              'within each bar. Query patterns: How many <E> are there, grouped by <F1:n> and <F2:n>?; '
+                              'What is the count of <F1:n> for each <F2:n>?',
                'name': 'vis_007_stacked_bar_count_horiz_stacked_grouped',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
@@ -754,12 +758,13 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'required': ['entity', 'field1', 'field2'],
                               'type': 'object'}},
   'type': 'function'},
- {'function': {'description': '[stacked_bar] Shows the frequency (proportion) of one nominal field within each '
-                              'category of another, as a vertical normalized bar chart. Design: Normalization computes '
-                              'proportions per group, enabling fair comparison across groups of different sizes. '
-                              'Vertical layout for small category counts (<=4). Tasks: Compare relative proportions '
-                              'across categories; identify which sub-groups dominate in each group. Query patterns: '
-                              'What is the frequency of <F1:n> for each <F2:n>?',
+ {'function': {'description': '[stacked_bar] Shows the relative frequency (proportion) of one nominal field within '
+                              'each category of another, as a vertical normalized bar chart. Design: Normalization '
+                              'computes proportions per group, enabling fair comparison across groups of different '
+                              'sizes. Vertical layout for small category counts (<=4). Color is preferably mapped to '
+                              'the variable with fewer unique values for better discriminability. Tasks: Compare '
+                              'relative proportions across categories; identify which sub-groups dominate in each '
+                              'group. Query patterns: What is the proportion of <F1:n> for each <F2:n>?',
                'name': 'vis_010_stacked_bar_freq_vert_normalized',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
@@ -771,11 +776,13 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'required': ['entity', 'field1', 'field2'],
                               'type': 'object'}},
   'type': 'function'},
- {'function': {'description': '[stacked_bar] Shows the frequency (proportion) of one nominal field within each '
-                              'category of another, as a horizontal normalized bar chart. Design: Normalization for '
-                              'proportional comparison. Horizontal layout for higher category counts (>4). Tasks: '
-                              'Compare relative proportions across categories; identify which sub-groups dominate in '
-                              'each group. Query patterns: What is the frequency of <F1:n> for each <F2:n>?',
+ {'function': {'description': '[stacked_bar] Shows the relative frequency (proportion) of one nominal field within '
+                              'each category of another, as a horizontal normalized bar chart. Design: Normalization '
+                              'for proportional comparison. Horizontal layout for higher category counts (>4). Color '
+                              'is preferably mapped to the variable with fewer unique values for better '
+                              'discriminability. Tasks: Compare relative proportions across categories; identify which '
+                              'sub-groups dominate in each group. Query patterns: What is the proportion of <F1:n> for '
+                              'each <F2:n>?',
                'name': 'vis_011_stacked_bar_freq_horiz_normalized',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
@@ -966,9 +973,10 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
   'type': 'function'},
  {'function': {'description': '[stacked_bar] Creates a vertical stacked bar chart of counts grouped by two nominal '
                               'fields. Design: Vertical stacked layout for small primary category counts (<=4). Color '
-                              'encodes the secondary field. Tasks: Compare group compositions across categories; '
-                              'assess the overall range of counts. Query patterns: Make a stacked bar chart of <F1:n> '
-                              'and <F2:n>?',
+                              'encodes the secondary field. Color is preferably mapped to the variable with fewer '
+                              'unique values for better discriminability. Tasks: Compare group compositions across '
+                              'categories; assess the overall range of counts. Query patterns: Make a stacked bar '
+                              'chart of <F1:n> and <F2:n>?',
                'name': 'vis_023_stacked_bar_count_vert_stacked_grouped',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
@@ -982,9 +990,10 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
   'type': 'function'},
  {'function': {'description': '[stacked_bar] Creates a horizontal stacked bar chart of counts grouped by two nominal '
                               'fields. Design: Horizontal stacked layout for higher primary category counts (>4). '
-                              'Color encodes the secondary field. Tasks: Compare group compositions across categories; '
-                              'assess the overall range of counts. Query patterns: Make a stacked bar chart of <F1:n> '
-                              'and <F2:n>?',
+                              'Color encodes the secondary field. Color is preferably mapped to the variable with '
+                              'fewer unique values for better discriminability. Tasks: Compare group compositions '
+                              'across categories; assess the overall range of counts. Query patterns: Make a stacked '
+                              'bar chart of <F1:n> and <F2:n>?',
                'name': 'vis_024_stacked_bar_count_horiz_stacked_grouped',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
@@ -996,12 +1005,12 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'required': ['entity', 'field1', 'field2'],
                               'type': 'object'}},
   'type': 'function'},
- {'function': {'description': '[circular] Creates a pie chart showing the frequency distribution of a nominal field. '
-                              'Design: Arc marks with theta encoding map frequency to angle. Suitable for fields with '
-                              'few categories (<8) where part-to-whole perception is the goal. Tasks: Assess '
-                              'part-to-whole proportions; identify the dominant category. Query patterns: Make a pie '
-                              'chart of <F:n>?',
-               'name': 'vis_025_circular_freq_distribution',
+ {'function': {'description': '[circular] Creates a pie chart showing the proportional distribution of a nominal '
+                              'field. Design: Arc marks with theta encoding map proportion to angle. Suitable for '
+                              'fields with few categories (<8) where part-to-whole perception is the goal. Tasks: '
+                              'Assess part-to-whole proportions; identify the dominant category. Query patterns: Make '
+                              'a pie chart of <F:n>?',
+               'name': 'vis_025_circular_proportion_distribution',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
@@ -1010,12 +1019,12 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'required': ['entity', 'field'],
                               'type': 'object'}},
   'type': 'function'},
- {'function': {'description': '[circular] Creates a donut chart showing the frequency distribution of a nominal field. '
-                              'Design: Donut variant with inner/outer radius creates a hollow center that can improve '
-                              'label readability. Suitable for few categories (<8). Tasks: Assess part-to-whole '
-                              'proportions; identify the dominant category. Query patterns: Make a donut chart of '
-                              '<F:n>?',
-               'name': 'vis_026_circular_freq_distribution',
+ {'function': {'description': '[circular] Creates a donut chart showing the proportional distribution of a nominal '
+                              'field. Design: Donut variant with inner/outer radius creates a hollow center that can '
+                              'improve label readability. Suitable for few categories (<8). Tasks: Assess '
+                              'part-to-whole proportions; identify the dominant category. Query patterns: Make a donut '
+                              'chart of <F:n>?',
+               'name': 'vis_026_circular_proportion_distribution',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
@@ -1171,7 +1180,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
   'type': 'function'},
  {'function': {'description': '[table] Lists all distinct values of a nominal field with their counts, displayed as a '
                               'table with in-cell bar marks. Design: Groups by the nominal field and counts '
-                              'occurrences. In-cell bars provide visual frequency comparison. Tasks: Determine the '
+                              'occurrences. In-cell bars provide visual proportion comparison. Tasks: Determine the '
                               'range (distinct values) of a nominal field; compare category frequencies. Query '
                               'patterns: What is the range of <E> <F:n> values?',
                'name': 'vis_037_table_count_distinct',
@@ -1250,10 +1259,11 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
  {'function': {'description': '[heatmap] Displays the count of entities for each combination of two nominal fields as '
                               'a heatmap with labeled cells. Design: Rect marks with quantitative color encoding show '
                               'density. Overlaid text marks display exact counts. Text color adapts based on cell '
-                              'intensity for readability. Tasks: Identify clusters or patterns in the co-occurrence of '
-                              'two fields; compare counts across combinations; find correlations. Query patterns: Are '
-                              'there any clusters with respect to <E> counts of <F1:n> and <F2:n>?; Make a heatmap of '
-                              '<E> <F1:n> and <F2:n>.',
+                              'intensity for readability. The field with more unique values is preferably placed on '
+                              'the y-axis, where longer labels remain readable. Tasks: Identify clusters or patterns '
+                              'in the co-occurrence of two fields; compare counts across combinations; find '
+                              'correlations. Query patterns: Are there any clusters with respect to <E> counts of '
+                              '<F1:n> and <F2:n>?; Make a heatmap of <E> <F1:n> and <F2:n>.',
                'name': 'vis_042_heatmap_count',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
@@ -1267,10 +1277,11 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
   'type': 'function'},
  {'function': {'description': '[heatmap] Displays the average of a quantitative field for each combination of two '
                               'nominal fields as a heatmap. Design: Uses three fields: a quantitative measure '
-                              'aggregated by average, and two nominal axes. Color encodes the aggregate value. Tasks: '
-                              'Identify patterns in the average value across two categorical dimensions; find '
-                              'combinations with extreme values. Query patterns: What is the average <F1:q> for each '
-                              '<F2:n> and <F3:n>?',
+                              'aggregated by average, and two nominal axes. Color encodes the aggregate value. The '
+                              'field with more unique values is preferably placed on the y-axis for better label '
+                              'readability. Tasks: Identify patterns in the average value across two categorical '
+                              'dimensions; find combinations with extreme values. Query patterns: What is the average '
+                              '<F1:q> for each <F2:n> and <F3:n>?',
                'name': 'vis_043_heatmap_avg',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
@@ -1449,8 +1460,8 @@ TOOL_DISPATCH = {'vis_000_barchart_count_vert_grouped': (0, {'entity': 'E', 'fie
  'vis_022_scatterplot_basic': (22, {'entity': 'E', 'field1': 'F1', 'field2': 'F2'}),
  'vis_023_stacked_bar_count_vert_stacked_grouped': (23, {'entity': 'E', 'field1': 'F1', 'field2': 'F2'}),
  'vis_024_stacked_bar_count_horiz_stacked_grouped': (24, {'entity': 'E', 'field1': 'F1', 'field2': 'F2'}),
- 'vis_025_circular_freq_distribution': (25, {'entity': 'E', 'field': 'F'}),
- 'vis_026_circular_freq_distribution': (26, {'entity': 'E', 'field': 'F'}),
+ 'vis_025_circular_proportion_distribution': (25, {'entity': 'E', 'field': 'F'}),
+ 'vis_026_circular_proportion_distribution': (26, {'entity': 'E', 'field': 'F'}),
  'vis_027_table_count': (27, {'entity': 'E'}),
  'vis_028_table_raw': (28, {'entity': 'E'}),
  'vis_029_table_join': (29, {'entity1': 'E1', 'entity2': 'E2'}),
