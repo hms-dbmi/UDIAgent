@@ -49,7 +49,7 @@
     ],
     "description":"Joins two entities and counts records grouped by a field from the related entity, displayed as a vertical bar chart.",
     "design_considerations":"Cross-entity join groups by a field not native to the counted entity. Vertical orientation for small category counts (<=4).",
-    "tasks":"Compare counts across categories from a related entity; discover cross-entity frequency patterns."
+    "tasks":"Compare counts across categories from a related entity; discover cross-entity distribution patterns."
   },
   {
     "query_templates":[
@@ -65,7 +65,7 @@
     ],
     "description":"Joins two entities and counts records grouped by a field from the related entity, displayed as a horizontal bar chart.",
     "design_considerations":"Cross-entity join with horizontal orientation for higher category counts (>4).",
-    "tasks":"Compare counts across categories from a related entity; discover cross-entity frequency patterns."
+    "tasks":"Compare counts across categories from a related entity; discover cross-entity distribution patterns."
   },
   {
     "query_templates":[
@@ -80,7 +80,7 @@
       "Compute_Derived_Value"
     ],
     "description":"Joins two entities and produces a vertical stacked bar chart of counts grouped by two nominal fields.",
-    "design_considerations":"Stacked bars show part-to-whole composition within each category. Vertical layout for small category counts (<=4). Color encodes the secondary grouping field from the related entity.",
+    "design_considerations":"Stacked bars show part-to-whole composition within each category. Vertical layout for small category counts (<=4). Color encodes the secondary grouping field from the related entity. Color is preferably mapped to the variable with fewer unique values for better discriminability.",
     "tasks":"Compare group compositions across categories; identify dominant sub-groups within each bar."
   },
   {
@@ -96,7 +96,7 @@
       "Compute_Derived_Value"
     ],
     "description":"Joins two entities and produces a horizontal stacked bar chart of counts grouped by two nominal fields.",
-    "design_considerations":"Horizontal orientation for higher category counts (>4). Color encodes the primary grouping field. Cross-entity join required.",
+    "design_considerations":"Horizontal orientation for higher category counts (>4). Color encodes the primary grouping field. Cross-entity join required. Color is preferably mapped to the variable with fewer unique values for better discriminability.",
     "tasks":"Compare group compositions across categories; identify dominant sub-groups within each bar."
   },
   {
@@ -112,7 +112,7 @@
       "Compute_Derived_Value"
     ],
     "description":"Counts entities grouped by two nominal fields, displayed as a vertical stacked bar chart.",
-    "design_considerations":"Vertical stacked layout for small category counts (<=4). Color encodes the sub-group field; x-axis shows the primary grouping.",
+    "design_considerations":"Vertical stacked layout for small category counts (<=4). Color encodes the sub-group field; x-axis shows the primary grouping. Color is preferably mapped to the variable with fewer unique values for better discriminability.",
     "tasks":"Compare group compositions across categories; identify dominant sub-groups within each bar."
   },
   {
@@ -129,7 +129,7 @@
       "Compute_Derived_Value"
     ],
     "description":"Counts entities grouped by two nominal fields, displayed as a horizontal stacked bar chart.",
-    "design_considerations":"Horizontal stacked layout for higher category counts (>4). Color encodes the sub-group; stacking shows part-to-whole within each bar.",
+    "design_considerations":"Horizontal stacked layout for higher category counts (>4). Color encodes the sub-group; stacking shows part-to-whole within each bar. Color is preferably mapped to the variable with fewer unique values for better discriminability.",
     "tasks":"Compare group compositions across categories; identify dominant sub-groups within each bar."
   },
   {
@@ -166,9 +166,9 @@
   },
   {
     "query_templates":[
-      "What is the frequency of <F1:n> for each <F2:n>?"
+      "What is the proportion of <F1:n> for each <F2:n>?"
     ],
-    "spec_template":"{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"groupby\": \"<F2>\", \"out\": \"groupCounts\"}, {\"rollup\": {\"<F2>_count\": {\"op\": \"count\"}}}, {\"groupby\": [\"<F1>\", \"<F2>\"], \"in\": \"<E>\"}, {\"rollup\": {\"<F1>_and_<F2>_count\": {\"op\": \"count\"}}}, {\"join\": {\"on\": \"<F2>\"}, \"in\": [\"<E>\", \"groupCounts\"], \"out\": \"datasets\"}, {\"derive\": {\"frequency\": \"d['<F1>_and_<F2>_count'] \/ d['<F2>_count']\"}}], \"representation\": {\"mark\": \"bar\", \"mapping\": [{\"encoding\": \"y\", \"field\": \"frequency\", \"type\": \"quantitative\"}, {\"encoding\": \"color\", \"field\": \"<F1>\", \"type\": \"nominal\"}, {\"encoding\": \"x\", \"field\": \"<F2>\", \"type\": \"nominal\"}]}}",
+    "spec_template":"{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"groupby\": \"<F2>\", \"out\": \"groupCounts\"}, {\"rollup\": {\"<F2>_count\": {\"op\": \"count\"}}}, {\"groupby\": [\"<F1>\", \"<F2>\"], \"in\": \"<E>\"}, {\"rollup\": {\"<F1>_and_<F2>_count\": {\"op\": \"count\"}}}, {\"join\": {\"on\": \"<F2>\"}, \"in\": [\"<E>\", \"groupCounts\"], \"out\": \"datasets\"}, {\"derive\": {\"proportion\": \"d['<F1>_and_<F2>_count'] \/ d['<F2>_count']\"}}], \"representation\": {\"mark\": \"bar\", \"mapping\": [{\"encoding\": \"y\", \"field\": \"proportion\", \"type\": \"quantitative\"}, {\"encoding\": \"color\", \"field\": \"<F1>\", \"type\": \"nominal\"}, {\"encoding\": \"x\", \"field\": \"<F2>\", \"type\": \"nominal\"}]}}",
     "creation_method":"template",
     "chart_type":"stacked_bar",
     "chart_complexity":"medium",
@@ -176,15 +176,15 @@
     "task_types":[
       "Compute_Derived_Value"
     ],
-    "description":"Shows the frequency (proportion) of one nominal field within each category of another, as a vertical normalized bar chart.",
-    "design_considerations":"Normalization computes proportions per group, enabling fair comparison across groups of different sizes. Vertical layout for small category counts (<=4).",
+    "description":"Shows the relative frequency (proportion) of one nominal field within each category of another, as a vertical normalized bar chart.",
+    "design_considerations":"Normalization computes proportions per group, enabling fair comparison across groups of different sizes. Vertical layout for small category counts (<=4). Color is preferably mapped to the variable with fewer unique values for better discriminability.",
     "tasks":"Compare relative proportions across categories; identify which sub-groups dominate in each group."
   },
   {
     "query_templates":[
-      "What is the frequency of <F1:n> for each <F2:n>?"
+      "What is the proportion of <F1:n> for each <F2:n>?"
     ],
-    "spec_template":"{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"groupby\": \"<F2>\", \"out\": \"groupCounts\"}, {\"rollup\": {\"<F2>_count\": {\"op\": \"count\"}}}, {\"groupby\": [\"<F1>\", \"<F2>\"], \"in\": \"<E>\"}, {\"rollup\": {\"<F1>_and_<F2>_count\": {\"op\": \"count\"}}}, {\"join\": {\"on\": \"<F2>\"}, \"in\": [\"<E>\", \"groupCounts\"], \"out\": \"datasets\"}, {\"derive\": {\"frequency\": \"d['<F1>_and_<F2>_count'] \/ d['<F2>_count']\"}}], \"representation\": {\"mark\": \"bar\", \"mapping\": [{\"encoding\": \"x\", \"field\": \"frequency\", \"type\": \"quantitative\"}, {\"encoding\": \"color\", \"field\": \"<F1>\", \"type\": \"nominal\"}, {\"encoding\": \"y\", \"field\": \"<F2>\", \"type\": \"nominal\"}]}}",
+    "spec_template":"{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"groupby\": \"<F2>\", \"out\": \"groupCounts\"}, {\"rollup\": {\"<F2>_count\": {\"op\": \"count\"}}}, {\"groupby\": [\"<F1>\", \"<F2>\"], \"in\": \"<E>\"}, {\"rollup\": {\"<F1>_and_<F2>_count\": {\"op\": \"count\"}}}, {\"join\": {\"on\": \"<F2>\"}, \"in\": [\"<E>\", \"groupCounts\"], \"out\": \"datasets\"}, {\"derive\": {\"proportion\": \"d['<F1>_and_<F2>_count'] \/ d['<F2>_count']\"}}], \"representation\": {\"mark\": \"bar\", \"mapping\": [{\"encoding\": \"x\", \"field\": \"proportion\", \"type\": \"quantitative\"}, {\"encoding\": \"color\", \"field\": \"<F1>\", \"type\": \"nominal\"}, {\"encoding\": \"y\", \"field\": \"<F2>\", \"type\": \"nominal\"}]}}",
     "creation_method":"template",
     "chart_type":"stacked_bar",
     "chart_complexity":"medium",
@@ -192,8 +192,8 @@
     "task_types":[
       "Compute_Derived_Value"
     ],
-    "description":"Shows the frequency (proportion) of one nominal field within each category of another, as a horizontal normalized bar chart.",
-    "design_considerations":"Normalization for proportional comparison. Horizontal layout for higher category counts (>4).",
+    "description":"Shows the relative frequency (proportion) of one nominal field within each category of another, as a horizontal normalized bar chart.",
+    "design_considerations":"Normalization for proportional comparison. Horizontal layout for higher category counts (>4). Color is preferably mapped to the variable with fewer unique values for better discriminability.",
     "tasks":"Compare relative proportions across categories; identify which sub-groups dominate in each group."
   },
   {
@@ -391,7 +391,7 @@
       "Determine_Range"
     ],
     "description":"Creates a vertical stacked bar chart of counts grouped by two nominal fields.",
-    "design_considerations":"Vertical stacked layout for small primary category counts (<=4). Color encodes the secondary field.",
+    "design_considerations":"Vertical stacked layout for small primary category counts (<=4). Color encodes the secondary field. Color is preferably mapped to the variable with fewer unique values for better discriminability.",
     "tasks":"Compare group compositions across categories; assess the overall range of counts."
   },
   {
@@ -408,14 +408,14 @@
       "Determine_Range"
     ],
     "description":"Creates a horizontal stacked bar chart of counts grouped by two nominal fields.",
-    "design_considerations":"Horizontal stacked layout for higher primary category counts (>4). Color encodes the secondary field.",
+    "design_considerations":"Horizontal stacked layout for higher primary category counts (>4). Color encodes the secondary field. Color is preferably mapped to the variable with fewer unique values for better discriminability.",
     "tasks":"Compare group compositions across categories; assess the overall range of counts."
   },
   {
     "query_templates":[
       "Make a pie chart of <F:n>?"
     ],
-    "spec_template":"{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"groupby\": \"<F>\"}, {\"rollup\": {\"frequency\": {\"op\": \"frequency\"}}}], \"representation\": {\"mark\": \"arc\", \"mapping\": [{\"encoding\": \"theta\", \"field\": \"frequency\", \"type\": \"quantitative\"}, {\"encoding\": \"color\", \"field\": \"<F>\", \"type\": \"nominal\"}]}}",
+    "spec_template":"{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"groupby\": \"<F>\"}, {\"rollup\": {\"proportion\": {\"op\": \"frequency\"}}}], \"representation\": {\"mark\": \"arc\", \"mapping\": [{\"encoding\": \"theta\", \"field\": \"proportion\", \"type\": \"quantitative\"}, {\"encoding\": \"color\", \"field\": \"<F>\", \"type\": \"nominal\"}]}}",
     "creation_method":"template",
     "chart_type":"circular",
     "chart_complexity":"simple",
@@ -424,15 +424,15 @@
       "Compute_Derived_Value",
       "Determine_Range"
     ],
-    "description":"Creates a pie chart showing the frequency distribution of a nominal field.",
-    "design_considerations":"Arc marks with theta encoding map frequency to angle. Suitable for fields with few categories (<8) where part-to-whole perception is the goal.",
+    "description":"Creates a pie chart showing the proportional distribution of a nominal field.",
+    "design_considerations":"Arc marks with theta encoding map proportion to angle. Suitable for fields with few categories (<8) where part-to-whole perception is the goal.",
     "tasks":"Assess part-to-whole proportions; identify the dominant category."
   },
   {
     "query_templates":[
       "Make a donut chart of <F:n>?"
     ],
-    "spec_template":"{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"groupby\": \"<F>\"}, {\"rollup\": {\"frequency\": {\"op\": \"frequency\"}}}], \"representation\": {\"mark\": \"arc\", \"mapping\": [{\"encoding\": \"theta\", \"field\": \"frequency\", \"type\": \"quantitative\"}, {\"encoding\": \"color\", \"field\": \"<F>\", \"type\": \"nominal\"}, {\"encoding\": \"radius\", \"value\": 60}, {\"encoding\": \"radius2\", \"value\": 80}]}}",
+    "spec_template":"{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"groupby\": \"<F>\"}, {\"rollup\": {\"proportion\": {\"op\": \"frequency\"}}}], \"representation\": {\"mark\": \"arc\", \"mapping\": [{\"encoding\": \"theta\", \"field\": \"proportion\", \"type\": \"quantitative\"}, {\"encoding\": \"color\", \"field\": \"<F>\", \"type\": \"nominal\"}, {\"encoding\": \"radius\", \"value\": 60}, {\"encoding\": \"radius2\", \"value\": 80}]}}",
     "creation_method":"template",
     "chart_type":"circular",
     "chart_complexity":"medium",
@@ -441,7 +441,7 @@
       "Compute_Derived_Value",
       "Determine_Range"
     ],
-    "description":"Creates a donut chart showing the frequency distribution of a nominal field.",
+    "description":"Creates a donut chart showing the proportional distribution of a nominal field.",
     "design_considerations":"Donut variant with inner\/outer radius creates a hollow center that can improve label readability. Suitable for few categories (<8).",
     "tasks":"Assess part-to-whole proportions; identify the dominant category."
   },
@@ -633,7 +633,7 @@
       "Determine_Range"
     ],
     "description":"Lists all distinct values of a nominal field with their counts, displayed as a table with in-cell bar marks.",
-    "design_considerations":"Groups by the nominal field and counts occurrences. In-cell bars provide visual frequency comparison.",
+    "design_considerations":"Groups by the nominal field and counts occurrences. In-cell bars provide visual proportion comparison.",
     "tasks":"Determine the range (distinct values) of a nominal field; compare category frequencies."
   },
   {
@@ -720,7 +720,7 @@
       "Correlate"
     ],
     "description":"Displays the count of entities for each combination of two nominal fields as a heatmap with labeled cells.",
-    "design_considerations":"Rect marks with quantitative color encoding show density. Overlaid text marks display exact counts. Text color adapts based on cell intensity for readability.",
+    "design_considerations":"Rect marks with quantitative color encoding show density. Overlaid text marks display exact counts. Text color adapts based on cell intensity for readability. The field with more unique values is preferably placed on the y-axis, where longer labels remain readable.",
     "tasks":"Identify clusters or patterns in the co-occurrence of two fields; compare counts across combinations; find correlations."
   },
   {
@@ -738,7 +738,7 @@
       "Correlate"
     ],
     "description":"Displays the average of a quantitative field for each combination of two nominal fields as a heatmap.",
-    "design_considerations":"Uses three fields: a quantitative measure aggregated by average, and two nominal axes. Color encodes the aggregate value.",
+    "design_considerations":"Uses three fields: a quantitative measure aggregated by average, and two nominal axes. Color encodes the aggregate value. The field with more unique values is preferably placed on the y-axis for better label readability.",
     "tasks":"Identify patterns in the average value across two categorical dimensions; find combinations with extreme values."
   },
   {
