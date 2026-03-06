@@ -354,9 +354,15 @@ def generate(templates_path: str, schema_path: str, output_path: str):
         tool_defs.append(tool_def)
         tool_dispatch[tool_name] = (template_idx, param_map)
 
-    # Build minimal schema for runtime (just URLs and relationships)
+    # Build schema for runtime (URLs, field metadata, and relationships)
     schema_data = {
-        "entities": {name: {"url": info["url"]} for name, info in schema["entities"].items()},
+        "entities": {
+            name: {
+                "url": info["url"],
+                "fields": {fname: finfo["type"] for fname, finfo in info["fields"].items()},
+            }
+            for name, info in schema["entities"].items()
+        },
         "relationships": schema["relationships"],
     }
 

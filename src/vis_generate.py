@@ -317,6 +317,105 @@ def instantiate_template(spec_template, bindings, schema):
     return json.loads(spec)
 
 
+def validate_bindings(spec_template, bindings, schema):
+    """Validate tool bindings against the schema before template instantiation.
+
+    Returns list of error strings (empty = valid).
+    """
+    errors = []
+    entities = schema.get("entities", {})
+    entity_names = list(entities.keys())
+
+    # Collect entity bindings (E, E1, E2)
+    entity_bindings = {}
+    for key, val in bindings.items():
+        if key in ("E", "E1", "E2"):
+            entity_bindings[key] = val
+
+    # Check entities exist
+    for key, name in entity_bindings.items():
+        if name not in entities:
+            errors.append(f"Entity '{name}' not found. Available: {', '.join(entity_names)}")
+
+    if errors:
+        return errors
+
+    # Check join entities are different
+    if "E1" in entity_bindings and "E2" in entity_bindings:
+        if entity_bindings["E1"] == entity_bindings["E2"]:
+            errors.append(f"entity1 and entity2 cannot be the same ('{entity_bindings['E1']}')")
+            return errors
+
+        # Check relationship exists
+        e1, e2 = entity_bindings["E1"], entity_bindings["E2"]
+        has_rel = any(
+            (r["from_entity"] == e1 and r["to_entity"] == e2) or
+            (r["from_entity"] == e2 and r["to_entity"] == e1)
+            for r in schema.get("relationships", [])
+        )
+        if not has_rel:
+            errors.append(f"No relationship between '{e1}' and '{e2}'")
+
+    # Extract placeholder type requirements from spec_template
+    placeholder_types = {}
+    for match in re.finditer(r'<([^>]+)>', spec_template):
+        ph = match.group(1)
+        # Determine the binding key: strip type suffix, e.g. "F:n" -> "F", "E1.F:q" -> "E1.F"
+        base = ph.split(":")[0] if ":" in ph else ph
+        field_type = None
+        if ":n" in ph:
+            field_type = "nominal"
+        elif ":q" in ph and ":q|o|n" not in ph:
+            field_type = "quantitative"
+        elif ":o" in ph:
+            field_type = "ordinal"
+        if field_type and base not in placeholder_types:
+            placeholder_types[base] = field_type
+
+    # Check fields exist on entities and types match
+    for key, field_name in bindings.items():
+        if key in ("E", "E1", "E2"):
+            continue
+
+        # Determine which entity this field belongs to
+        if key.startswith("E1."):
+            entity_name = entity_bindings.get("E1")
+        elif key.startswith("E2."):
+            entity_name = entity_bindings.get("E2")
+        else:
+            entity_name = entity_bindings.get("E")
+
+        if not entity_name or entity_name not in entities:
+            continue
+
+        entity_fields = entities[entity_name].get("fields", {})
+
+        if field_name not in entity_fields:
+            available_by_type = {}
+            for fn, ft in entity_fields.items():
+                available_by_type.setdefault(ft, []).append(fn)
+            avail_str = "; ".join(f"{t}: {', '.join(fs)}" for t, fs in available_by_type.items())
+            errors.append(
+                f"Field '{field_name}' not found on entity '{entity_name}'. "
+                f"Available fields — {avail_str}"
+            )
+            continue
+
+        # Check field type matches template requirement
+        expected_type = placeholder_types.get(key)
+        if expected_type:
+            actual_type = entity_fields[field_name]
+            if actual_type != expected_type:
+                # List available fields of the expected type
+                matching = [fn for fn, ft in entity_fields.items() if ft == expected_type]
+                errors.append(
+                    f"Field '{field_name}' is {actual_type} but template requires {expected_type}. "
+                    f"Available {expected_type} fields: {', '.join(matching)}"
+                )
+
+    return errors
+
+
 def _load_generated_tools():
     """Load generated tool data. Returns (tool_defs, tool_dispatch, templates, schema) or None."""
     try:
@@ -350,22 +449,41 @@ def _execute_generate(skill, context):
         tool_messages = [{"role": "system", "content": system_msg}] + list(context["messages"])
 
         result = _call_llm_with_tools(agent, tool_messages, tool_defs, config)
-        if result is not None:
+        for _attempt in range(2):  # initial + one retry
+            if result is None:
+                break
             tool_name, tool_args = result
             dispatch = tool_dispatch.get(tool_name)
-            if dispatch is not None:
-                template_idx, param_map = dispatch
-                bindings = {param_map[k]: v for k, v in tool_args.items() if k in param_map}
-                try:
-                    spec_dict = instantiate_template(templates[template_idx], bindings, tool_schema)
-                    spec_str = json.dumps(spec_dict)
-                    context["spec_str"] = spec_str
-                    context["gen_messages"] = tool_messages
-                    context["tool_used"] = tool_name
-                    context["tool_args"] = tool_args
-                    return context
-                except Exception:
-                    pass  # Fall through to LLM generation
+            if dispatch is None:
+                break
+
+            template_idx, param_map = dispatch
+            bindings = {param_map[k]: v for k, v in tool_args.items() if k in param_map}
+            validation_errors = validate_bindings(templates[template_idx], bindings, tool_schema)
+
+            if validation_errors:
+                if _attempt == 0:
+                    # Retry once with error hints
+                    hint = "The previous tool call had errors:\n" + "\n".join(f"- {e}" for e in validation_errors)
+                    retry_messages = tool_messages + [
+                        {"role": "assistant", "content": f"Tool call: {tool_name}({json.dumps(tool_args)})"},
+                        {"role": "user", "content": hint + "\n\nPlease select a corrected tool call."},
+                    ]
+                    result = _call_llm_with_tools(agent, retry_messages, tool_defs, config)
+                    continue
+                else:
+                    break  # Still invalid after retry, fall through
+
+            try:
+                spec_dict = instantiate_template(templates[template_idx], bindings, tool_schema)
+                spec_str = json.dumps(spec_dict)
+                context["spec_str"] = spec_str
+                context["gen_messages"] = tool_messages
+                context["tool_used"] = tool_name
+                context["tool_args"] = tool_args
+                return context
+            except Exception:
+                break  # Fall through to LLM generation
 
     # --- Fallback: single-shot LLM generation ---
     examples_path = config.get(
