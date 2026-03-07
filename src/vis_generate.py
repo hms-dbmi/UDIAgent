@@ -407,10 +407,10 @@ def validate_bindings(spec_template, bindings, schema):
             )
 
     # Extract placeholder type requirements from spec_template
+    # Source 1: placeholder suffixes like <F:n>, <F1:q>
     placeholder_types = {}
     for match in re.finditer(r"<([^>]+)>", spec_template):
         ph = match.group(1)
-        # Determine the binding key: strip type suffix, e.g. "F:n" -> "F", "E1.F:q" -> "E1.F"
         base = ph.split(":")[0] if ":" in ph else ph
         field_type = None
         if ":n" in ph:
@@ -421,6 +421,26 @@ def validate_bindings(spec_template, bindings, schema):
             field_type = "ordinal"
         if field_type and base not in placeholder_types:
             placeholder_types[base] = field_type
+
+    # Source 2: declared "type" in encoding mappings (e.g. {"field": "<F1>", "type": "nominal"})
+    try:
+        spec_parsed = json.loads(spec_template)
+        rep = spec_parsed.get("representation", {})
+        reps = rep if isinstance(rep, list) else [rep]
+        for r in reps:
+            mappings = r.get("mapping", [])
+            if isinstance(mappings, dict):
+                mappings = [mappings]
+            for m in mappings:
+                field = m.get("field", "")
+                declared_type = m.get("type")
+                ph_match = re.fullmatch(r"<([^>]+)>", field)
+                if ph_match and declared_type:
+                    base = ph_match.group(1).split(":")[0]
+                    if base not in placeholder_types:
+                        placeholder_types[base] = declared_type
+    except (json.JSONDecodeError, TypeError):
+        pass
 
     # Check fields exist on entities and types match
     for key, field_name in bindings.items():
