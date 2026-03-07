@@ -344,7 +344,7 @@ def _extract_xy_placeholders(spec_template):
             field = m.get("field", "")
             if enc in ("x", "y") and enc not in result:
                 # Only consider fields that are a single placeholder like "<F1>"
-                match = re.fullmatch(r'<([^>]+)>', field)
+                match = re.fullmatch(r"<([^>]+)>", field)
                 if match:
                     result[enc] = match.group(1)
     return result
@@ -368,7 +368,9 @@ def validate_bindings(spec_template, bindings, schema):
     # Check entities exist
     for key, name in entity_bindings.items():
         if name not in entities:
-            errors.append(f"Entity '{name}' not found. Available: {', '.join(entity_names)}")
+            errors.append(
+                f"Entity '{name}' not found. Available: {', '.join(entity_names)}"
+            )
 
     if errors:
         return errors
@@ -376,14 +378,16 @@ def validate_bindings(spec_template, bindings, schema):
     # Check join entities are different
     if "E1" in entity_bindings and "E2" in entity_bindings:
         if entity_bindings["E1"] == entity_bindings["E2"]:
-            errors.append(f"entity1 and entity2 cannot be the same ('{entity_bindings['E1']}')")
+            errors.append(
+                f"entity1 and entity2 cannot be the same ('{entity_bindings['E1']}')"
+            )
             return errors
 
         # Check relationship exists
         e1, e2 = entity_bindings["E1"], entity_bindings["E2"]
         has_rel = any(
-            (r["from_entity"] == e1 and r["to_entity"] == e2) or
-            (r["from_entity"] == e2 and r["to_entity"] == e1)
+            (r["from_entity"] == e1 and r["to_entity"] == e2)
+            or (r["from_entity"] == e2 and r["to_entity"] == e1)
             for r in schema.get("relationships", [])
         )
         if not has_rel:
@@ -404,7 +408,7 @@ def validate_bindings(spec_template, bindings, schema):
 
     # Extract placeholder type requirements from spec_template
     placeholder_types = {}
-    for match in re.finditer(r'<([^>]+)>', spec_template):
+    for match in re.finditer(r"<([^>]+)>", spec_template):
         ph = match.group(1)
         # Determine the binding key: strip type suffix, e.g. "F:n" -> "F", "E1.F:q" -> "E1.F"
         base = ph.split(":")[0] if ":" in ph else ph
@@ -438,26 +442,45 @@ def validate_bindings(spec_template, bindings, schema):
 
         if field_name not in entity_fields:
             available_by_type = {}
-            for fn, ft in entity_fields.items():
+            for fn, finfo in entity_fields.items():
+                ft = finfo["type"] if isinstance(finfo, dict) else finfo
                 available_by_type.setdefault(ft, []).append(fn)
-            avail_str = "; ".join(f"{t}: {', '.join(fs)}" for t, fs in available_by_type.items())
+            avail_str = "; ".join(
+                f"{t}: {', '.join(fs)}" for t, fs in available_by_type.items()
+            )
             errors.append(
                 f"Field '{field_name}' not found on entity '{entity_name}'. "
                 f"Available fields — {avail_str}"
             )
             continue
 
+        field_info = entity_fields[field_name]
+        actual_type = field_info["type"] if isinstance(field_info, dict) else field_info
+        cardinality = (
+            field_info.get("cardinality", 0) if isinstance(field_info, dict) else 0
+        )
+
         # Check field type matches template requirement
         expected_type = placeholder_types.get(key)
         if expected_type:
-            actual_type = entity_fields[field_name]
             if actual_type != expected_type:
                 # List available fields of the expected type
-                matching = [fn for fn, ft in entity_fields.items() if ft == expected_type]
+                matching = [
+                    fn
+                    for fn, fi in entity_fields.items()
+                    if (fi["type"] if isinstance(fi, dict) else fi) == expected_type
+                ]
                 errors.append(
                     f"Field '{field_name}' is {actual_type} but template requires {expected_type}. "
                     f"Available {expected_type} fields: {', '.join(matching)}"
                 )
+
+        # Check nominal fields don't have too many unique values for visualization
+        if (actual_type == "nominal" or actual_type == "ordinal") and cardinality > 50:
+            errors.append(
+                f"Field '{field_name}' has {cardinality} unique values, which is too many "
+                f"for a visualization (max 50). Choose a different encoding or visualization."
+            )
 
     return errors
 
@@ -466,6 +489,7 @@ def _load_generated_tools():
     """Load generated tool data. Returns (tool_defs, tool_dispatch, templates, schema) or None."""
     try:
         from generated_vis_tools import TOOL_DEFS, TOOL_DISPATCH, TEMPLATES, SCHEMA
+
         return TOOL_DEFS, TOOL_DISPATCH, TEMPLATES, SCHEMA
     except ImportError:
         return None
@@ -492,7 +516,9 @@ def _execute_generate(skill, context):
             "tool and provide the correct arguments.\n\n"
             f"## Available Datasets\n\n{data_schema_simple}"
         )
-        tool_messages = [{"role": "system", "content": system_msg}] + list(context["messages"])
+        tool_messages = [{"role": "system", "content": system_msg}] + list(
+            context["messages"]
+        )
 
         result = _call_llm_with_tools(agent, tool_messages, tool_defs, config)
         for _attempt in range(2):  # initial + one retry
@@ -505,23 +531,38 @@ def _execute_generate(skill, context):
 
             template_idx, param_map = dispatch
             bindings = {param_map[k]: v for k, v in tool_args.items() if k in param_map}
-            validation_errors = validate_bindings(templates[template_idx], bindings, tool_schema)
+            validation_errors = validate_bindings(
+                templates[template_idx], bindings, tool_schema
+            )
 
             if validation_errors:
                 if _attempt == 0:
                     # Retry once with error hints
-                    hint = "The previous tool call had errors:\n" + "\n".join(f"- {e}" for e in validation_errors)
+                    hint = "The previous tool call had errors:\n" + "\n".join(
+                        f"- {e}" for e in validation_errors
+                    )
                     retry_messages = tool_messages + [
-                        {"role": "assistant", "content": f"Tool call: {tool_name}({json.dumps(tool_args)})"},
-                        {"role": "user", "content": hint + "\n\nPlease select a corrected tool call."},
+                        {
+                            "role": "assistant",
+                            "content": f"Tool call: {tool_name}({json.dumps(tool_args)})",
+                        },
+                        {
+                            "role": "user",
+                            "content": hint
+                            + "\n\nPlease select a corrected tool call.",
+                        },
                     ]
-                    result = _call_llm_with_tools(agent, retry_messages, tool_defs, config)
+                    result = _call_llm_with_tools(
+                        agent, retry_messages, tool_defs, config
+                    )
                     continue
                 else:
                     break  # Still invalid after retry, fall through
 
             try:
-                spec_dict = instantiate_template(templates[template_idx], bindings, tool_schema)
+                spec_dict = instantiate_template(
+                    templates[template_idx], bindings, tool_schema
+                )
                 spec_str = json.dumps(spec_dict)
                 context["spec_str"] = spec_str
                 context["gen_messages"] = tool_messages
@@ -762,7 +803,11 @@ def generate_vis_spec(agent, messages, data_schema, grammar, config=None):
     plan = ["generate", "validate"]
     context = run_skills(plan, context, registry)
 
-    spec = context["spec_dict"] if context["spec_dict"] is not None else context["spec_str"]
+    spec = (
+        context["spec_dict"]
+        if context["spec_dict"] is not None
+        else context["spec_str"]
+    )
     if not isinstance(spec, str):
         spec = json.dumps(spec)
 

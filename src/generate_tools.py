@@ -211,6 +211,81 @@ def _get_field_type_for_placeholder(placeholder: str) -> str | None:
     return None
 
 
+def _extract_encoding_info(spec_template: str) -> dict[str, dict]:
+    """Extract encoding roles and declared types for each placeholder from a spec template.
+
+    Parses the spec_template JSON and walks the representation mappings to find
+    which visual encoding (x, y, color, theta, etc.) each placeholder is used in,
+    and what data type the encoding declares.
+
+    Returns: dict mapping placeholder base (e.g. "F1", "E2.F") to
+             {"encodings": ["x", ...], "declared_type": "nominal" | "quantitative" | None}
+    """
+    info: dict[str, dict] = {}
+    try:
+        spec = json.loads(spec_template)
+    except (json.JSONDecodeError, TypeError):
+        return info
+
+    rep = spec.get("representation", {})
+    reps = rep if isinstance(rep, list) else [rep]
+    for r in reps:
+        mappings = r.get("mapping", [])
+        if isinstance(mappings, dict):
+            mappings = [mappings]
+        for m in mappings:
+            encoding = m.get("encoding", "")
+            field = m.get("field", "")
+            declared_type = m.get("type")  # "nominal", "quantitative", "ordinal"
+            # Match fields that are a single placeholder like "<F1>" or "<E2.F>"
+            match = re.fullmatch(r'<([^>]+)>', field)
+            if match and encoding:
+                ph = match.group(1)
+                base = ph.split(":")[0] if ":" in ph else ph
+                if base not in info:
+                    info[base] = {"encodings": [], "declared_type": None}
+                if encoding not in info[base]["encodings"]:
+                    info[base]["encodings"].append(encoding)
+                if declared_type and info[base]["declared_type"] is None:
+                    info[base]["declared_type"] = declared_type
+    return info
+
+
+_ENCODING_LABELS = {
+    "x": "x-axis",
+    "y": "y-axis",
+    "color": "color",
+    "theta": "angle/size",
+    "radius": "radius",
+    "radius2": "outer radius",
+    "opacity": "opacity",
+    "size": "size",
+    "text": "text label",
+    "xOffset": "x-axis sub-group",
+    "yOffset": "y-axis sub-group",
+}
+
+
+def _build_field_description(field_type: str | None, encoding_info: dict | None) -> str:
+    """Build a descriptive string for a field parameter.
+
+    Args:
+        field_type: Type from placeholder suffix (:n, :q, :o) or None.
+        encoding_info: {"encodings": [...], "declared_type": str|None} from spec template.
+    """
+    # Prefer placeholder suffix type, fall back to declared type from encoding
+    resolved_type = field_type
+    if not resolved_type and encoding_info:
+        resolved_type = encoding_info.get("declared_type")
+    type_str = resolved_type or "any type"
+
+    encodings = encoding_info.get("encodings", []) if encoding_info else []
+    if encodings:
+        labels = [_ENCODING_LABELS.get(e, e) for e in encodings]
+        return f"{type_str} field, encodes {', '.join(labels)}."
+    return f"{type_str} field."
+
+
 # ---------------------------------------------------------------------------
 # Tool generation (single entity templates)
 # ---------------------------------------------------------------------------
@@ -236,6 +311,7 @@ def _generate_single_entity_tool(
 
     tool_name = _derive_tool_name(template, index)
     description = _build_tool_description(template)
+    encoding_info = _extract_encoding_info(spec_template)
 
     properties = {
         "entity": {"type": "string", "description": "The data entity (table) to visualize."},
@@ -260,7 +336,7 @@ def _generate_single_entity_tool(
         field_type = _get_field_type_for_placeholder(ph)
         properties[param_name] = {
             "type": "string",
-            "description": f"Field name ({field_type or 'any type'}) from the entity.",
+            "description": _build_field_description(field_type, encoding_info.get(base)),
         }
         required.append(param_name)
         param_map[param_name] = base
@@ -318,6 +394,7 @@ def _generate_join_entity_tool(
 
     tool_name = _derive_tool_name(template, index)
     description = _build_tool_description(template)
+    encoding_info = _extract_encoding_info(spec_template)
 
     properties = {
         "entity1": {"type": "string", "description": "The primary data entity (table)."},
@@ -349,7 +426,7 @@ def _generate_join_entity_tool(
         field_type = _get_field_type_for_placeholder(ph)
         properties[param_name] = {
             "type": "string",
-            "description": f"Field name ({field_type or 'any type'}) from the entity.",
+            "description": _build_field_description(field_type, encoding_info.get(base)),
         }
         required.append(param_name)
         param_map[param_name] = base
@@ -418,7 +495,10 @@ def generate(templates_path: str, schema_path: str, output_path: str):
         "entities": {
             name: {
                 "url": info["url"],
-                "fields": {fname: finfo["type"] for fname, finfo in info["fields"].items()},
+                "fields": {
+                    fname: {"type": finfo["type"], "cardinality": finfo["cardinality"]}
+                    for fname, finfo in info["fields"].items()
+                },
             }
             for name, info in schema["entities"].items()
         },
