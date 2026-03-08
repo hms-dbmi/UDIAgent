@@ -38,13 +38,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+CLAUDE_MODEL_NAME = os.getenv("CLAUDE_MODEL_NAME", "claude-sonnet-4-6")
+
 # init agent
 agent = UDIAgent(
-    # model_name="agenticx/UDI-VIS-Beta-v0-Llama-3.1-8B",
     model_name=MODEL_NAME,
-    gpt_model_name="gpt-4.1",
-    # gpt_model_name="gpt-4.1-nano",
-    # gpt_model_name="gpt-5-nano",
+    claude_model_name=CLAUDE_MODEL_NAME,
     vllm_server_url=VLLM_SERVER_URL,
     vllm_server_port=VLLM_SERVER_PORT,
     tokenizer_name=TOKENIZER_NAME,
