@@ -120,7 +120,7 @@ class UDIAgent:
                 "type": "json_schema",
                 "json_schema": schema,
             },
-            max_tokens=10,
+            max_completion_tokens=10,
             temperature=0.0,
         )
         # Parse
@@ -154,7 +154,7 @@ class UDIAgent:
             },
             n=n,
             temperature=0.0,
-            max_tokens=16_384,
+            max_completion_tokens=16_384,
         )
 
         # Each choice is guaranteed to be valid JSON per schema
