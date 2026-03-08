@@ -188,20 +188,38 @@ def load_grammar(grammar_name, base_path="./src"):
 
 
 def _call_llm_with_tools(agent, messages, tools, config):
-    """Call the LLM with function-calling tools. Returns (tool_name, arguments) or None."""
+    """Call the LLM with function-calling tools. Returns (tool_name, arguments) or None.
+
+    Converts OpenAI-style tool definitions to Anthropic format and uses
+    the Anthropic Claude client.
+    """
     try:
-        resp = agent.gpt_model.chat.completions.create(
-            model=agent.gpt_model_name,
-            messages=messages,
-            tools=tools,
-            tool_choice="auto",
+        # Convert OpenAI tool format to Anthropic format
+        anthropic_tools = []
+        for tool in tools:
+            func = tool.get("function", tool)
+            anthropic_tools.append({
+                "name": func["name"],
+                "description": func.get("description", ""),
+                "input_schema": func.get("parameters", func.get("input_schema", {})),
+            })
+
+        # Extract system messages
+        system_text, user_messages = agent._split_system_messages(messages)
+
+        resp = agent.claude_model.messages.create(
+            model=agent.claude_model_name,
+            system=system_text,
+            messages=user_messages,
+            tools=anthropic_tools,
+            tool_choice={"type": "auto"},
             temperature=0.0,
             max_tokens=1024,
         )
-        choice = resp.choices[0]
-        if choice.message.tool_calls:
-            tc = choice.message.tool_calls[0]
-            return tc.function.name, json.loads(tc.function.arguments)
+
+        for block in resp.content:
+            if block.type == "tool_use":
+                return block.name, block.input
     except Exception:
         pass
     return None
@@ -210,7 +228,7 @@ def _call_llm_with_tools(agent, messages, tools, config):
 def _call_llm(agent, messages, grammar, config, backend):
     """Call the LLM and return the raw spec string."""
     if backend == "gpt":
-        results = agent.gpt_completions_guided_json(
+        results = agent.claude_completions_guided_json(
             messages=messages,
             json_schema=grammar["schema_string"],
             n=config.get("n", 1),

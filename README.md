@@ -8,7 +8,7 @@ To run the entrypoint into the multi-agent system I run a simple python api.
 
 `fastapi run ./src/udi_api.py`
 
-This is the endpoint that is called by the YAC frontend. The `udi_api.py` script makes calls to openai and the finetuned model running with vllm.
+This is the endpoint that is called by the YAC frontend. The `udi_api.py` script makes calls to Anthropic Claude and the finetuned model running with vllm.
 
 ### set environment variables
 
@@ -16,7 +16,8 @@ This is the endpoint that is called by the YAC frontend. The `udi_api.py` script
 
 | Item                | Command / Value                                        | Description                                                                                                                                                                                          |
 | ------------------- | ------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| OPEN_API_KEY        | `OPEN_API_KEY=your-key-goes-here`                      | Required. The multi-agent system currently maeks calls to open ai.                                                                                                                                   |
+| ANTHROPIC_API_KEY   | `ANTHROPIC_API_KEY=your-key-goes-here`                 | Required. API key for Anthropic Claude, used for orchestration and structured outputs.                                                                                                               |
+| CLAUDE_MODEL_NAME   | `CLAUDE_MODEL_NAME=claude-sonnet-4-6`              | Optional. Claude model for orchestration. Defaults to `claude-sonnet-4-6`.                                                                                                                       |
 | JWT_SECRET_KEY      | `JWT_SECRET_KEY=your-key-goes-here`                    | Required. Secret key for JWT generation.                                                                                                                                                             |
 | UDI_MODEL_NAME      | `UDI_MODEL_NAME=HIDIVE/UDI-VIS-Beta-v2-Llama-3.1-8B`   | Required. Path to local or public model name, depending on how the model is served via vllm. Note, this is the model name for the fine-tuned visualization generation model, not a foundation model. |
 | VLLM_SERVER_URL     | `VLLM_SERVER_URL=http://localhost`                     | Optional. Hostname of the vllm server. Defaults to `http://localhost`.                                                                                                                               |
