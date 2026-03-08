@@ -176,6 +176,18 @@ def yac_benchmark(
     return {"tool_calls": tool_calls, "orchestrator_choice": calls_to_make}
 
 
+@app.get("/v1/yac/examples")
+def yac_examples():
+    examples_path = "./data/example_prompts.json"
+    if not os.path.exists(examples_path):
+        return JSONResponse(
+            content={"error": f"File {examples_path} not found."}, status_code=404
+        )
+    with open(examples_path, "r") as f:
+        data = json.load(f)
+    return JSONResponse(content=data)
+
+
 @app.get("/v1/yac/benchmark_analysis")
 def yac_benchmark_nalysis():
     RESULT_FILENAME = "./out/benchmark_analysis.json"
