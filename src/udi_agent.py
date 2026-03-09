@@ -49,7 +49,8 @@ class UDIAgent:
             base_url=base_url,
         )
 
-        self.gpt_model = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        env_key = os.getenv("OPENAI_API_KEY")
+        self.gpt_model = OpenAI(api_key=env_key) if env_key else None
 
         logger.info("Model connections initialized")
 
@@ -62,6 +63,11 @@ class UDIAgent:
         """Return a per-request OpenAI client if a custom key is provided, otherwise the default."""
         if openai_api_key:
             return _make_openai_client(openai_api_key)
+        if self.gpt_model is None:
+            raise RuntimeError(
+                "No OpenAI API key available. Set the OPENAI_API_KEY environment variable "
+                "or provide a per-request key."
+            )
         return self.gpt_model
 
     # def init_internal_models(self):

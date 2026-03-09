@@ -39,6 +39,8 @@ ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
 MODEL_NAME = os.getenv("UDI_MODEL_NAME")
 TOKENIZER_NAME = os.getenv("UDI_TOKENIZER_NAME", MODEL_NAME)
 INSECURE_DEV_MODE = os.getenv("INSECURE_DEV_MODE", "0") == "1"
+VLLM_SERVER_URL = os.getenv("VLLM_SERVER_URL", "http://localhost")
+VLLM_SERVER_PORT = int(os.getenv("VLLM_SERVER_PORT", "55001"))
 
 app = FastAPI()
 
@@ -61,8 +63,8 @@ agent = UDIAgent(
     gpt_model_name="gpt-4.1",
     # gpt_model_name="gpt-4.1-nano",
     # gpt_model_name="gpt-5-nano",
-    vllm_server_url="http://localhost",
-    vllm_server_port=55001,
+    vllm_server_url=VLLM_SERVER_URL,
+    vllm_server_port=VLLM_SERVER_PORT,
     tokenizer_name=TOKENIZER_NAME,
 )
 
@@ -465,7 +467,11 @@ def function_call_render_visualization_pipeline(request: YACCompletionRequest, o
         grammar=_pipeline_grammar,
         openai_api_key=openai_api_key,
     )
-    return {"name": "RenderVisualization", "arguments": {"spec": result["spec"]}}
+    return {
+        "name": "RenderVisualization",
+        "arguments": {"spec": result["spec"]},
+        "meta": result.get("meta"),
+    }
 
 
 def function_call_render_visualization(request: YACCompletionRequest, openai_api_key: str | None = None):
