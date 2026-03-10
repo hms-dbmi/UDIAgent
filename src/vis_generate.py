@@ -197,7 +197,7 @@ def _call_llm_with_tools(agent, messages, tools, config, openai_api_key=None):
             tools=tools,
             tool_choice="auto",
             temperature=0.0,
-            max_tokens=1024,
+            max_completion_tokens=1024,
         )
         choice = resp.choices[0]
         if choice.message.tool_calls:
