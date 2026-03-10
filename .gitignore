@@ -1,6 +1,7 @@
 archive
 out/
 *.gz
+logs/*.log*
 
 .claude/todo
 

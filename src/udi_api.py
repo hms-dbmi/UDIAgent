@@ -1,5 +1,8 @@
 import os
 import json
+import logging
+from logging.handlers import RotatingFileHandler
+from pathlib import Path
 from typing import Union
 from pydantic import BaseModel
 from fastapi import FastAPI, Header, HTTPException, Depends
@@ -13,6 +16,21 @@ from jose import jwt, JWTError
 from dotenv import load_dotenv
 
 from vis_generate import generate_vis_spec, load_grammar
+
+# --- Logging setup ---
+_log_dir = Path(__file__).resolve().parent.parent / "logs"
+_log_dir.mkdir(exist_ok=True)
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+    handlers=[
+        RotatingFileHandler(_log_dir / "udi_agent.log", maxBytes=5_000_000, backupCount=3),
+        logging.StreamHandler(),
+    ],
+)
+
+logger = logging.getLogger(__name__)
 
 load_dotenv()  # automatically loads from .env
 
@@ -138,40 +156,48 @@ class YACBenchmarkCompletionRequest(BaseModel):
 
 @app.post("/v1/yac/completions")
 def yac_completions(
-    request: YACCompletionRequest, token_payload: dict = Depends(verify_jwt)
+    request: YACCompletionRequest,
+    token_payload: dict = Depends(verify_jwt),
+    x_openai_key: str | None = Header(None, alias="X-OpenAI-Key"),
 ):
     split_tool_calls(request)
-    calls_to_make = determine_function_calls(request)
-    print("calls_to_make:", calls_to_make)
+    calls_to_make = determine_function_calls(request, openai_api_key=x_openai_key)
+    logger.info("calls_to_make: %s", calls_to_make)
     tool_calls = []
     if calls_to_make == "both" or calls_to_make == "get-subset-of-data":
-        tool_calls.extend(function_call_filter(request))
+        tool_calls.extend(function_call_filter(request, openai_api_key=x_openai_key))
     if calls_to_make == "both" or calls_to_make == "render-visualization":
-        tool_calls.append(function_call_render_visualization(request))
-    print("tool_calls:", tool_calls)
+        tool_calls.append(function_call_render_visualization(request, openai_api_key=x_openai_key))
+    logger.info("tool_calls: %s", tool_calls)
     return tool_calls
 
 
 @app.post("/v1/yac/benchmark")
 def yac_benchmark(
-    request: YACBenchmarkCompletionRequest, token_payload: dict = Depends(verify_jwt)
+    request: YACBenchmarkCompletionRequest,
+    token_payload: dict = Depends(verify_jwt),
+    x_openai_key: str | None = Header(None, alias="X-OpenAI-Key"),
 ):
     # copy of yac/completions, but also exports orchestrator choice for easier benchmarking
     split_tool_calls(request)
     if request.orchestrator_choice is not None:
         calls_to_make = request.orchestrator_choice
     else:
-        calls_to_make = determine_function_calls(request)
+        calls_to_make = determine_function_calls(request, openai_api_key=x_openai_key)
     tool_calls = []
     if calls_to_make == "both" or calls_to_make == "get-subset-of-data":
-        tool_calls.extend(function_call_filter(request))
+        tool_calls.extend(function_call_filter(request, openai_api_key=x_openai_key))
     if calls_to_make == "both" or calls_to_make == "render-visualization":
         # Support per-request pipeline override for A/B benchmarking
         use_pipeline = request.use_pipeline if request.use_pipeline is not None else USE_VIS_PIPELINE
         if use_pipeline:
-            tool_calls.append(function_call_render_visualization_pipeline(request))
+            tool_calls.append(
+                function_call_render_visualization_pipeline(request, openai_api_key=x_openai_key)
+            )
         else:
-            tool_calls.append(function_call_render_visualization_legacy(request))
+            tool_calls.append(
+                function_call_render_visualization_legacy(request, openai_api_key=x_openai_key)
+            )
     return {"tool_calls": tool_calls, "orchestrator_choice": calls_to_make}
 
 
@@ -229,7 +255,7 @@ def strip_tool_calls(messages: list[dict]):
     return messages
 
 
-def determine_function_calls(request: YACCompletionRequest):
+def determine_function_calls(request: YACCompletionRequest, openai_api_key: str | None = None):
     choices = ["render-visualization", "get-subset-of-data", "both"]
     # add some prompt engineering into the messages.
     messages = copy.deepcopy(
@@ -274,8 +300,9 @@ def determine_function_calls(request: YACCompletionRequest):
             }
         ],
         choices=choices,
+        openai_api_key=openai_api_key,
     )
-    print("determine choice response:", response)
+    logger.info("determine choice response: %s", response)
     return response
     # return 'render-visualization'  # TODO: testing, remove this later.
     # return 'both'  # TODO: testing, remove this later.
@@ -283,7 +310,7 @@ def determine_function_calls(request: YACCompletionRequest):
     # return response.choices[0].text
 
 
-def function_call_filter(request: YACCompletionRequest):
+def function_call_filter(request: YACCompletionRequest, openai_api_key: str | None = None):
     messages = copy.deepcopy(
         request.messages
     )  # make a copy to avoid mutating the original
@@ -301,6 +328,7 @@ def function_call_filter(request: YACCompletionRequest):
     # to work well with anyof / oneof thingies.
     response = agent.gpt_completions_guided_json(
         messages=messages,
+        openai_api_key=openai_api_key,
         json_schema=json.dumps(
             {
                 "type": "object",
@@ -394,7 +422,7 @@ def function_call_filter(request: YACCompletionRequest):
             # }
         ),
     )
-    print(response)
+    logger.debug("filter response: %s", response)
     tool_calls = [{"name": "FilterData", "arguments": args} for args in response]
     return tool_calls
     # return json.loads(response.choices[0].text)
@@ -402,7 +430,7 @@ def function_call_filter(request: YACCompletionRequest):
     # return {"name": "FilterData", "arguments": response}
 
 
-def function_call_render_visualization_legacy(request: YACCompletionRequest):
+def function_call_render_visualization_legacy(request: YACCompletionRequest, openai_api_key: str | None = None):
     f = open("./src/UDIGrammarSchema.json", "r")
     udi_grammar_dict = json.load(f)
     f.close()
@@ -440,7 +468,7 @@ def function_call_render_visualization_legacy(request: YACCompletionRequest):
     return json.loads(response.choices[0].text)
 
 
-def function_call_render_visualization_pipeline(request: YACCompletionRequest):
+def function_call_render_visualization_pipeline(request: YACCompletionRequest, openai_api_key: str | None = None):
     messages = copy.deepcopy(request.messages)
     strip_tool_calls(messages)
     result = generate_vis_spec(
@@ -448,6 +476,7 @@ def function_call_render_visualization_pipeline(request: YACCompletionRequest):
         messages=messages,
         data_schema=request.dataSchema,
         grammar=_pipeline_grammar,
+        openai_api_key=openai_api_key,
     )
     return {
         "name": "RenderVisualization",
@@ -456,10 +485,10 @@ def function_call_render_visualization_pipeline(request: YACCompletionRequest):
     }
 
 
-def function_call_render_visualization(request: YACCompletionRequest):
+def function_call_render_visualization(request: YACCompletionRequest, openai_api_key: str | None = None):
     if USE_VIS_PIPELINE:
-        return function_call_render_visualization_pipeline(request)
-    return function_call_render_visualization_legacy(request)
+        return function_call_render_visualization_pipeline(request, openai_api_key=openai_api_key)
+    return function_call_render_visualization_legacy(request, openai_api_key=openai_api_key)
     # return {"name": "RenderVisualization", "arguments": {"spec": spec}}
 
 

@@ -1,4 +1,7 @@
 import json
+import logging
+from functools import lru_cache
+
 from langfuse.openai import OpenAI
 from jinja2 import Template
 from transformers import AutoTokenizer
@@ -9,10 +12,13 @@ from dotenv import load_dotenv
 
 load_dotenv()  # automatically loads from .env
 
-# Use multiprocess backend for workers
-# os.environ["VLLM_WORKER_MULTIPROC"] = "1"
+logger = logging.getLogger(__name__)
 
-# os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
+
+@lru_cache(maxsize=128)
+def _make_openai_client(api_key: str) -> OpenAI:
+    """Cached OpenAI client factory — preserves httpx connection pooling across requests."""
+    return OpenAI(api_key=api_key)
 
 
 class UDIAgent:
@@ -43,12 +49,26 @@ class UDIAgent:
             base_url=base_url,
         )
 
-        self.gpt_model = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        env_key = os.getenv("OPENAI_API_KEY")
+        self.gpt_model = OpenAI(api_key=env_key) if env_key else None
+
+        logger.info("Model connections initialized")
 
         # Cache tokenizer + chat template once (avoid reloading per request)
         tokenizer = AutoTokenizer.from_pretrained(self.tokenizer_name)
         self.tokenizer = tokenizer
         self.chat_template = Template(tokenizer.chat_template)
+
+    def _get_gpt_client(self, openai_api_key: str | None = None):
+        """Return a per-request OpenAI client if a custom key is provided, otherwise the default."""
+        if openai_api_key:
+            return _make_openai_client(openai_api_key)
+        if self.gpt_model is None:
+            raise RuntimeError(
+                "No OpenAI API key available. Set the OPENAI_API_KEY environment variable "
+                "or provide a per-request key."
+            )
+        return self.gpt_model
 
     # def init_internal_models(self):
     #     self.llm = LLM(
@@ -100,7 +120,11 @@ class UDIAgent:
     #     return response
 
     def completions_guided_choice(
-        self, messages: list[dict], tools: list[dict], choices: list[str]
+        self,
+        messages: list[dict],
+        tools: list[dict],
+        choices: list[str],
+        openai_api_key: str | None = None,
     ):
         schema = {
             "name": "ChoiceSelection",
@@ -113,7 +137,8 @@ class UDIAgent:
             "strict": True,
         }
 
-        resp = self.gpt_model.chat.completions.create(
+        client = self._get_gpt_client(openai_api_key)
+        resp = client.chat.completions.create(
             model=self.gpt_model_name,  # e.g. "gpt-4.1-mini"
             messages=messages,  # [{"role":"user","content":"..."}]
             response_format={  # <-- key part
@@ -128,7 +153,9 @@ class UDIAgent:
         # content is guaranteed to be valid JSON per schema
         return json.loads(content)["choice"]
 
-    def gpt_completions_guided_json(self, messages: list[dict], json_schema: str, n=1):
+    def gpt_completions_guided_json(
+        self, messages: list[dict], json_schema: str, n=1, openai_api_key: str | None = None
+    ):
         # Normalize schema to dict
         if isinstance(json_schema, str):
             try:
@@ -145,7 +172,8 @@ class UDIAgent:
             "strict": True,  # disallow extra fields
         }
 
-        resp = self.gpt_model.chat.completions.create(
+        client = self._get_gpt_client(openai_api_key)
+        resp = client.chat.completions.create(
             model=self.gpt_model_name,  # e.g. "gpt-4.1-mini"
             messages=messages,  # [{"role": "user", "content": "..."}]
             response_format={
@@ -262,7 +290,7 @@ class UDIAgent:
     #     return response
 
     def completions(self, messages: list[dict], tools: list[dict]):
-        print(f"Messages: {messages}")
+        logger.debug("Messages: %s", messages)
 
         # Debugging, remove all the tool_calls from the messages
         # TODO: try reformatting as strings.
@@ -274,7 +302,7 @@ class UDIAgent:
             messages=messages, tools=tools, add_generation_prompt=True
         )
 
-        print(f"Prompt: {prompt}")
+        logger.debug("Prompt: %s", prompt)
 
         response = self.model.completions.create(
             model=self.model_name,
