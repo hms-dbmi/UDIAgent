@@ -8,6 +8,7 @@ from pydantic import BaseModel
 from fastapi import FastAPI, Header, HTTPException, Depends
 from fastapi.responses import JSONResponse
 from udi_agent import UDIAgent
+
 # from src.udi_agent import UDIAgent
 from fastapi.middleware.cors import CORSMiddleware
 import copy
@@ -15,7 +16,13 @@ import copy
 from jose import jwt, JWTError
 from dotenv import load_dotenv
 
-from vis_generate import generate_vis_spec, load_grammar, load_skills, _render_template, simplify_data_domains
+from vis_generate import (
+    generate_vis_spec,
+    load_grammar,
+    load_skills,
+    _render_template,
+    simplify_data_domains,
+)
 
 # --- Logging setup ---
 _log_dir = Path(__file__).resolve().parent.parent / "logs"
@@ -221,10 +228,23 @@ class YACBenchmarkCompletionRequest(BaseModel):
 
 
 def _handle_create_visualization(tool_args: dict, request, use_pipeline: bool):
-    """Dispatch handler for CreateVisualization tool calls."""
+    """Dispatch handler for CreateVisualization tool calls.
+
+    Uses the tool call's ``description`` argument as the user message so that
+    each call generates a distinct visualization, even when the orchestrator
+    returns multiple CreateVisualization tool calls for one user turn.
+    """
+    # Build a focused request whose messages end with the specific description
+    focused = copy.deepcopy(request)
+    description = tool_args.get("description", "")
+    if description:
+        focused.messages = [
+            msg for msg in focused.messages if msg.get("role") != "user"
+        ] + [{"role": "user", "content": description}]
+
     if use_pipeline:
-        return function_call_render_visualization_pipeline(request)
-    return function_call_render_visualization_legacy(request)
+        return function_call_render_visualization_pipeline(focused)
+    return function_call_render_visualization_legacy(focused)
 
 
 def _handle_filter_data(tool_args: dict, request, use_pipeline: bool):
@@ -260,7 +280,9 @@ TOOL_DISPATCH = {
 # ---------------------------------------------------------------------------
 
 
-def orchestrate_tool_calls(request: YACCompletionRequest, use_pipeline: bool = USE_VIS_PIPELINE):
+def orchestrate_tool_calls(
+    request: YACCompletionRequest, use_pipeline: bool = USE_VIS_PIPELINE
+):
     """Use LLM tool calling to determine and execute the right actions.
 
     The LLM is given CreateVisualization and FilterData tools and can
@@ -367,7 +389,9 @@ def yac_benchmark(
     x_openai_key: str | None = Header(None, alias="X-OpenAI-Key"),
 ):
     split_tool_calls(request)
-    use_pipeline = request.use_pipeline if request.use_pipeline is not None else USE_VIS_PIPELINE
+    use_pipeline = (
+        request.use_pipeline if request.use_pipeline is not None else USE_VIS_PIPELINE
+    )
 
     if request.orchestrator_choice is not None:
         # Legacy path: explicit orchestrator_choice override for A/B testing
