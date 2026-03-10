@@ -15,7 +15,7 @@ import copy
 from jose import jwt, JWTError
 from dotenv import load_dotenv
 
-from vis_generate import generate_vis_spec, load_grammar, load_skills, _render_template
+from vis_generate import generate_vis_spec, load_grammar, load_skills, _render_template, simplify_data_domains
 
 # --- Logging setup ---
 _log_dir = Path(__file__).resolve().parent.parent / "logs"
@@ -273,7 +273,7 @@ def orchestrate_tool_calls(request: YACCompletionRequest, use_pipeline: bool = U
     orchestrate_skill = _skills["orchestrate"]
     rendered = _render_template(
         orchestrate_skill.instructions,
-        {"data_domains": request.dataDomains},
+        {"data_domains": simplify_data_domains(request.dataDomains)},
     )
     messages.insert(0, {"role": "system", "content": rendered})
 
