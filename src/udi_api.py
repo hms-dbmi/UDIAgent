@@ -426,7 +426,8 @@ def yac_examples():
         )
     with open(examples_path, "r") as f:
         data = json.load(f)
-    return JSONResponse(content=data)
+    prompts = [item["input"]["messages"][0]["content"] for item in data]
+    return JSONResponse(content=prompts)
 
 
 @app.get("/v1/yac/benchmark_analysis")
