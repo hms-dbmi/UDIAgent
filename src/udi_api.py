@@ -38,13 +38,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+GPT_MODEL_NAME = os.getenv("GPT_MODEL_NAME", "gpt-5.4")
+
 # init agent
 agent = UDIAgent(
-    # model_name="agenticx/UDI-VIS-Beta-v0-Llama-3.1-8B",
     model_name=MODEL_NAME,
-    gpt_model_name="gpt-4.1",
-    # gpt_model_name="gpt-4.1-nano",
-    # gpt_model_name="gpt-5-nano",
+    gpt_model_name=GPT_MODEL_NAME,
     vllm_server_url=VLLM_SERVER_URL,
     vllm_server_port=VLLM_SERVER_PORT,
     tokenizer_name=TOKENIZER_NAME,
