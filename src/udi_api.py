@@ -32,7 +32,9 @@ logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s %(levelname)s %(name)s: %(message)s",
     handlers=[
-        RotatingFileHandler(_log_dir / "udi_agent.log", maxBytes=5_000_000, backupCount=3),
+        RotatingFileHandler(
+            _log_dir / "udi_agent.log", maxBytes=5_000_000, backupCount=3
+        ),
         logging.StreamHandler(),
     ],
 )
@@ -317,7 +319,7 @@ def orchestrate_tool_calls(
         tools=ORCHESTRATOR_TOOLS,
         tool_choice="required",
         temperature=0.0,
-        max_tokens=1024,
+        max_completion_tokens=1024,
     )
 
     choice = resp.choices[0]
@@ -479,7 +481,9 @@ def strip_tool_calls(messages: list[dict]):
 # ---------------------------------------------------------------------------
 
 
-def function_call_filter(request: YACCompletionRequest, openai_api_key: str | None = None):
+def function_call_filter(
+    request: YACCompletionRequest, openai_api_key: str | None = None
+):
     messages = copy.deepcopy(
         request.messages
     )  # make a copy to avoid mutating the original
@@ -550,7 +554,9 @@ def function_call_filter(request: YACCompletionRequest, openai_api_key: str | No
 # ---------------------------------------------------------------------------
 
 
-def function_call_render_visualization_legacy(request: YACCompletionRequest, openai_api_key: str | None = None):
+def function_call_render_visualization_legacy(
+    request: YACCompletionRequest, openai_api_key: str | None = None
+):
     f = open("./src/UDIGrammarSchema.json", "r")
     udi_grammar_dict = json.load(f)
     f.close()
@@ -588,7 +594,9 @@ def function_call_render_visualization_legacy(request: YACCompletionRequest, ope
     return json.loads(response.choices[0].text)
 
 
-def function_call_render_visualization_pipeline(request: YACCompletionRequest, openai_api_key: str | None = None):
+def function_call_render_visualization_pipeline(
+    request: YACCompletionRequest, openai_api_key: str | None = None
+):
     messages = copy.deepcopy(request.messages)
     strip_tool_calls(messages)
     result = generate_vis_spec(
@@ -605,10 +613,16 @@ def function_call_render_visualization_pipeline(request: YACCompletionRequest, o
     }
 
 
-def function_call_render_visualization(request: YACCompletionRequest, openai_api_key: str | None = None):
+def function_call_render_visualization(
+    request: YACCompletionRequest, openai_api_key: str | None = None
+):
     if USE_VIS_PIPELINE:
-        return function_call_render_visualization_pipeline(request, openai_api_key=openai_api_key)
-    return function_call_render_visualization_legacy(request, openai_api_key=openai_api_key)
+        return function_call_render_visualization_pipeline(
+            request, openai_api_key=openai_api_key
+        )
+    return function_call_render_visualization_legacy(
+        request, openai_api_key=openai_api_key
+    )
 
 
 class UDICompletionRequest(BaseModel):

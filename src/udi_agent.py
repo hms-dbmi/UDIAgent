@@ -93,8 +93,8 @@ class UDIAgent:
         response = self.model.chat.completions.create(
             model=self.model_name,
             messages=messages,
-            # max_tokens=40960,
-            max_tokens=120_000,
+            # max_completion_tokens=40960,
+            max_completion_tokens=120_000,
             temperature=0.0,
             # top_p=1.0,
         )
@@ -111,7 +111,7 @@ class UDIAgent:
     #     response = self.gpt_model.completions.create(
     #         model=self.gpt_model_name,
     #         prompt=prompt,
-    #         max_tokens=100,
+    #         max_completion_tokens=100,
     #         extra_body={
     #             "guided_choice": choices,
     #         }
@@ -154,7 +154,11 @@ class UDIAgent:
         return json.loads(content)["choice"]
 
     def gpt_completions_guided_json(
-        self, messages: list[dict], json_schema: str, n=1, openai_api_key: str | None = None
+        self,
+        messages: list[dict],
+        json_schema: str,
+        n=1,
+        openai_api_key: str | None = None,
     ):
         # Normalize schema to dict
         if isinstance(json_schema, str):
@@ -200,7 +204,7 @@ class UDIAgent:
         response = self.model.completions.create(
             model=self.model_name,
             prompt=prompt,
-            max_tokens=16_384,
+            max_completion_tokens=16_384,
             temperature=0.0,
             n=n,
             extra_body={
@@ -271,7 +275,7 @@ class UDIAgent:
     #     response = self.model.completions.create(
     #         model=self.model_name,
     #         prompt=prompt,
-    #         max_tokens=16_384,
+    #         max_completion_tokens=16_384,
     #         # n=3,
     #         # logprobs=3,
     #         temperature=0.7,
@@ -307,7 +311,7 @@ class UDIAgent:
         response = self.model.completions.create(
             model=self.model_name,
             prompt=prompt,
-            max_tokens=16_384,
+            max_completion_tokens=16_384,
             temperature=0.0,
             # top_p=1.0,
         )
