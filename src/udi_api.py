@@ -105,9 +105,13 @@ ORCHESTRATOR_TOOLS = [
                     "description": {
                         "type": "string",
                         "description": "A brief natural-language description of what visualization to create.",
-                    }
+                    },
+                    "title": {
+                        "type": "string",
+                        "description": "A short, informative title for the chart (e.g. 'Donor Count by Sex', 'Height vs Weight').",
+                    },
                 },
-                "required": ["description"],
+                "required": ["description", "title"],
                 "additionalProperties": False,
             },
         },
@@ -243,8 +247,15 @@ def _handle_create_visualization(tool_args: dict, request, use_pipeline: bool):
         ] + [{"role": "user", "content": description}]
 
     if use_pipeline:
-        return function_call_render_visualization_pipeline(focused)
-    return function_call_render_visualization_legacy(focused)
+        result = function_call_render_visualization_pipeline(focused)
+    else:
+        result = function_call_render_visualization_legacy(focused)
+
+    title = tool_args.get("title", "")
+    if title:
+        result["title"] = title
+
+    return result
 
 
 def _handle_filter_data(tool_args: dict, request, use_pipeline: bool):
