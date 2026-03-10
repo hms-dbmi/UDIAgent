@@ -15,7 +15,7 @@ import copy
 from jose import jwt, JWTError
 from dotenv import load_dotenv
 
-from vis_generate import generate_vis_spec, load_grammar
+from vis_generate import generate_vis_spec, load_grammar, load_skills, _render_template
 
 # --- Logging setup ---
 _log_dir = Path(__file__).resolve().parent.parent / "logs"
@@ -71,6 +71,8 @@ USE_VIS_PIPELINE = os.getenv("USE_VIS_PIPELINE", "0") == "1"
 
 if USE_VIS_PIPELINE:
     _pipeline_grammar = load_grammar("udi")
+
+_skills = load_skills()
 
 
 # ---------------------------------------------------------------------------
@@ -268,22 +270,12 @@ def orchestrate_tool_calls(request: YACCompletionRequest, use_pipeline: bool = U
     messages = copy.deepcopy(request.messages)
     strip_tool_calls(messages)
 
-    system_msg = {
-        "role": "system",
-        "content": (
-            "You are a helpful assistant that investigates data. Based on the user's "
-            "request, call the appropriate tools. You may call multiple tools in a single "
-            "response when the user asks for multiple operations (e.g. filter + visualize).\n\n"
-            "Assume that past tool calls in the history carry over to the current state:\n"
-            "  - visualizations rendered still appear to the user\n"
-            "  - data filter state still carries over\n"
-            "Take this into account when deciding. For instance, if the user asks for "
-            "existing views to be filtered you just need to call FilterData, no need to "
-            "render the visualization again.\n\n"
-            f"Available dataset domains:\n{request.dataDomains}"
-        ),
-    }
-    messages.insert(0, system_msg)
+    orchestrate_skill = _skills["orchestrate"]
+    rendered = _render_template(
+        orchestrate_skill.instructions,
+        {"data_domains": request.dataDomains},
+    )
+    messages.insert(0, {"role": "system", "content": rendered})
 
     # Call LLM with tool definitions
     resp = agent.gpt_model.chat.completions.create(
