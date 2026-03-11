@@ -23,6 +23,12 @@ from vis_generate import (
     _render_template,
     simplify_data_domains,
 )
+from structured_functions import (
+    validate_structured_text,
+    segment_structured_text,
+    get_function_signatures,
+    export_registry_json,
+)
 
 # --- Logging setup ---
 _log_dir = Path(__file__).resolve().parent.parent / "logs"
@@ -75,7 +81,7 @@ agent = UDIAgent(
     vllm_server_url=VLLM_SERVER_URL,
     vllm_server_port=VLLM_SERVER_PORT,
     tokenizer_name=TOKENIZER_NAME,
-    use_vis_pipeline=USE_VIS_PIPELINE
+    use_vis_pipeline=USE_VIS_PIPELINE,
 )
 
 
@@ -85,11 +91,152 @@ if USE_VIS_PIPELINE:
 _skills = load_skills()
 
 
+def parse_schema_from_dict(raw):
+    """Parse a data schema dict into the structure expected by structured_functions.
+
+    Similar to generate_tools.parse_schema but works with an in-memory dict
+    instead of a file path.
+    """
+    entities = {}
+    for resource in raw.get("resources", []):
+        name = resource["name"]
+        row_count = resource.get("udi:row_count", 0)
+        fields = {}
+        for field in resource.get("schema", {}).get("fields", []):
+            cardinality = field.get("udi:cardinality", 0)
+            if cardinality == 0:
+                continue
+            fields[field["name"]] = {
+                "type": field.get("udi:data_type", ""),
+                "cardinality": cardinality,
+            }
+        entities[name] = {"row_count": row_count, "fields": fields}
+    return {"entities": entities}
+
+
 # ---------------------------------------------------------------------------
 # Top-level tool definitions (declarative registry)
 # ---------------------------------------------------------------------------
 
 ORCHESTRATOR_TOOLS = [
+    {
+        "type": "function",
+        "function": {
+            "name": "Rebuff",
+            "description": (
+                "Use this tool when the user's request CANNOT be fulfilled by any "
+                "other available tool. For example: requests about topics unrelated "
+                "to the loaded data, requests for unsupported chart types, or "
+                "requests that require capabilities the system does not have."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "user_request": {
+                        "type": "string",
+                        "description": "The original user query that cannot be fulfilled.",
+                    },
+                    "reason": {
+                        "type": "string",
+                        "description": "A brief explanation of why the request cannot be fulfilled.",
+                    },
+                },
+                "required": ["user_request", "reason"],
+                "additionalProperties": False,
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "ClarifyVariable",
+            "description": (
+                "Use this tool when the user's request references an ambiguous variable "
+                "that could match multiple fields or entities in the dataset. For example, "
+                "'age' might match 'age_value' in donors or 'sample_age' in samples. "
+                "Returns a clarification request with candidate variables for the user "
+                "to choose from."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "message": {
+                        "type": "string",
+                        "description": "A natural-language explanation of what is ambiguous and why clarification is needed.",
+                    },
+                    "ambiguous_variables": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "query_term": {
+                                    "type": "string",
+                                    "description": "The term from the user's request that is ambiguous.",
+                                },
+                                "candidates": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "object",
+                                        "properties": {
+                                            "field_name": {
+                                                "type": "string",
+                                                "description": "The actual field name in the schema.",
+                                            },
+                                            "entity": {
+                                                "type": "string",
+                                                "description": "The dataset entity this field belongs to.",
+                                            },
+                                        },
+                                        "required": ["field_name", "entity"],
+                                        "additionalProperties": False,
+                                    },
+                                    "description": "Candidate fields that could match the ambiguous term.",
+                                },
+                            },
+                            "required": ["query_term", "candidates"],
+                            "additionalProperties": False,
+                        },
+                        "description": "List of ambiguous variables with their candidate matches.",
+                    },
+                },
+                "required": ["message", "ambiguous_variables"],
+                "additionalProperties": False,
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "FreeTextExplain",
+            "description": (
+                "Use this tool when the user asks an informational question — about "
+                "available functionality, datasets, or general system capabilities — "
+                "that does NOT require generating a visualization or filtering data. "
+                "For example: 'what can I do?', 'what data is available?', 'how many "
+                "tables are there?', 'what types of charts can you make?'"
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "user_request": {
+                        "type": "string",
+                        "description": "The original informational question from the user.",
+                    },
+                    "response_type": {
+                        "type": "string",
+                        "enum": ["capabilities", "data_summary", "general"],
+                        "description": (
+                            "The category of explanation needed: 'capabilities' for what the "
+                            "system can do, 'data_summary' for information about loaded datasets, "
+                            "'general' for other informational questions."
+                        ),
+                    },
+                },
+                "required": ["user_request", "response_type"],
+                "additionalProperties": False,
+            },
+        },
+    },
     {
         "type": "function",
         "function": {
@@ -267,9 +414,193 @@ def _handle_create_visualization(
     return result
 
 
-def _handle_filter_data(
+def _handle_rebuff(
     tool_args: dict, request, use_pipeline: bool, openai_api_key: str | None = None
 ):
+    """Dispatch handler for Rebuff tool calls.
+
+    Generates a rebuff response with available capabilities derived from
+    the current tool set.
+    """
+    # Derive available capabilities from ORCHESTRATOR_TOOLS (excluding Rebuff itself)
+    available_capabilities = [
+        f"{t['function']['name']}: {t['function']['description']}"
+        for t in ORCHESTRATOR_TOOLS
+        if t["function"]["name"] != "Rebuff"
+    ]
+
+    rebuff_skill = _skills.get("rebuff")
+    if rebuff_skill:
+        rendered = _render_template(
+            rebuff_skill.instructions,
+            {
+                "user_request": tool_args.get("user_request", ""),
+                "reason": tool_args.get("reason", ""),
+                "available_tools": "\n".join(
+                    f"- {cap}" for cap in available_capabilities
+                ),
+            },
+        )
+        gpt_client = agent._get_gpt_client(openai_api_key)
+        resp = gpt_client.chat.completions.create(
+            model=agent.gpt_model_name,
+            messages=[
+                {"role": "system", "content": rendered},
+                {
+                    "role": "user",
+                    "content": tool_args.get("user_request", ""),
+                },
+            ],
+            temperature=0.0,
+            max_completion_tokens=1024,
+        )
+        try:
+            response_data = json.loads(resp.choices[0].message.content)
+        except (json.JSONDecodeError, IndexError):
+            response_data = {
+                "message": f"Sorry, I cannot fulfill this request. {tool_args.get('reason', '')}",
+                "suggestions": [],
+            }
+    else:
+        response_data = {
+            "message": f"Sorry, I cannot fulfill this request. {tool_args.get('reason', '')}",
+            "suggestions": [],
+        }
+
+    return {
+        "name": "Rebuff",
+        "arguments": response_data,
+    }
+
+
+def _handle_free_text_explain(
+    tool_args: dict, request, use_pipeline: bool, openai_api_key: str | None = None
+):
+    """Dispatch handler for FreeTextExplain tool calls.
+
+    Generates a structured text response using the skill prompt, dynamically
+    injecting available tools, data schema, and structured function signatures.
+    The response may contain {function_name(args)} references that are validated
+    and optionally resolved server-side.
+    """
+    # Derive available capabilities from ORCHESTRATOR_TOOLS
+    available_tools = "\n".join(
+        f"- {t['function']['name']}: {t['function']['description']}"
+        for t in ORCHESTRATOR_TOOLS
+        if t["function"]["name"] not in ("Rebuff", "FreeTextExplain")
+    )
+
+    # Simplify data schema for LLM consumption
+    data_schema_simple = simplify_data_domains(request.dataDomains)
+
+    explain_skill = _skills.get("free_text_explain")
+    if explain_skill:
+        rendered = _render_template(
+            explain_skill.instructions,
+            {
+                "user_request": tool_args.get("user_request", ""),
+                "response_type": tool_args.get("response_type", "general"),
+                "available_tools": available_tools,
+                "data_schema": data_schema_simple,
+                "structured_functions": get_function_signatures(),
+            },
+        )
+        gpt_client = agent._get_gpt_client(openai_api_key)
+        resp = gpt_client.chat.completions.create(
+            model=agent.gpt_model_name,
+            messages=[
+                {"role": "system", "content": rendered},
+                {
+                    "role": "user",
+                    "content": tool_args.get("user_request", ""),
+                },
+            ],
+            temperature=0.0,
+            max_completion_tokens=1024,
+        )
+        text_response = resp.choices[0].message.content
+    else:
+        text_response = "I can help you explore and visualize data. Try asking for a specific chart or data summary."
+
+    # Validate structured function references
+    validation_errors = validate_structured_text(text_response)
+
+    # Segment text into mixed list of plain strings and structured element objects
+    if not validation_errors:
+        try:
+            schema_dict = (
+                json.loads(request.dataSchema)
+                if isinstance(request.dataSchema, str)
+                else request.dataSchema
+            )
+            schema_parsed = parse_schema_from_dict(schema_dict)
+            text_segments, has_structured = segment_structured_text(
+                text_response, schema_parsed
+            )
+        except Exception:
+            text_segments = [text_response]
+            has_structured = False
+    else:
+        text_segments = [text_response]
+        has_structured = False
+
+    return {
+        "name": "FreeTextExplain",
+        "arguments": {
+            "response_type": tool_args.get("response_type", "general"),
+            "text": text_segments,
+            "has_structured_elements": has_structured,
+        },
+    }
+
+
+def _handle_clarify_variable(tool_args: dict, request, use_pipeline: bool):
+    """Dispatch handler for ClarifyVariable tool calls.
+
+    Enriches the LLM-provided candidates with data_type and description
+    looked up from the data schema, so the LLM only needs to provide
+    field_name and entity.
+    """
+    # Parse the data schema to look up field metadata
+    try:
+        schema_raw = (
+            json.loads(request.dataSchema)
+            if isinstance(request.dataSchema, str)
+            else request.dataSchema
+        )
+    except (json.JSONDecodeError, TypeError):
+        schema_raw = {}
+
+    # Build a lookup: (entity, field_name) -> {data_type, description}
+    field_meta = {}
+    for resource in schema_raw.get("resources", []):
+        entity_name = resource.get("name", "")
+        for field in resource.get("schema", {}).get("fields", []):
+            fname = field.get("name", "")
+            field_meta[(entity_name, fname)] = {
+                "data_type": field.get("udi:data_type", "unknown"),
+                "description": field.get("description", "").strip(),
+            }
+
+    # Enrich each candidate with data_type and description from the schema
+    ambiguous_variables = tool_args.get("ambiguous_variables", [])
+    for var in ambiguous_variables:
+        for candidate in var.get("candidates", []):
+            key = (candidate.get("entity", ""), candidate.get("field_name", ""))
+            meta = field_meta.get(key, {})
+            candidate["data_type"] = meta.get("data_type", "unknown")
+            candidate["description"] = meta.get("description", "")
+
+    return {
+        "name": "ClarifyVariable",
+        "arguments": {
+            "message": tool_args.get("message", ""),
+            "ambiguous_variables": ambiguous_variables,
+        },
+    }
+
+
+def _handle_filter_data(tool_args: dict, request, use_pipeline: bool):
     """Dispatch handler for FilterData tool calls.
 
     Builds a single FilterData result from the tool call arguments.
@@ -292,6 +623,9 @@ def _handle_filter_data(
 
 # Dispatch dict: tool name -> handler function
 TOOL_DISPATCH = {
+    "Rebuff": _handle_rebuff,
+    "ClarifyVariable": _handle_clarify_variable,
+    "FreeTextExplain": _handle_free_text_explain,
     "CreateVisualization": _handle_create_visualization,
     "FilterData": _handle_filter_data,
 }
@@ -342,6 +676,9 @@ def orchestrate_tool_calls(
     tool_calls = []
     has_vis = False
     has_filter = False
+    has_rebuff = False
+    has_clarify = False
+    has_explain = False
 
     for tc in choice.message.tool_calls:
         tool_name = tc.function.name
@@ -352,16 +689,30 @@ def orchestrate_tool_calls(
             print(f"Unknown tool: {tool_name}, skipping")
             continue
 
-        result = handler(tool_args, request, use_pipeline, openai_api_key=openai_api_key)
+        result = handler(
+            tool_args, request, use_pipeline, openai_api_key=openai_api_key
+        )
         tool_calls.append(result)
 
         if tool_name == "CreateVisualization":
             has_vis = True
         elif tool_name == "FilterData":
             has_filter = True
+        elif tool_name == "Rebuff":
+            has_rebuff = True
+        elif tool_name == "ClarifyVariable":
+            has_clarify = True
+        elif tool_name == "FreeTextExplain":
+            has_explain = True
 
     # Derive orchestrator_choice for backward compatibility
-    if has_vis and has_filter:
+    if has_explain:
+        orchestrator_choice = "explain"
+    elif has_clarify:
+        orchestrator_choice = "clarify-variable"
+    elif has_rebuff:
+        orchestrator_choice = "rebuff"
+    elif has_vis and has_filter:
         orchestrator_choice = "both"
     elif has_filter:
         orchestrator_choice = "get-subset-of-data"
@@ -382,9 +733,7 @@ def _run_legacy_orchestration(
     """Run legacy if/else orchestration for backward-compatible benchmark overrides."""
     tool_calls = []
     if calls_to_make in ("both", "get-subset-of-data"):
-        tool_calls.extend(
-            function_call_filter(request, openai_api_key=openai_api_key)
-        )
+        tool_calls.extend(function_call_filter(request, openai_api_key=openai_api_key))
     if calls_to_make in ("both", "render-visualization"):
         if use_pipeline:
             tool_calls.append(
@@ -458,6 +807,12 @@ def yac_examples():
         data = json.load(f)
     prompts = [item["input"]["messages"][0]["content"] for item in data]
     return JSONResponse(content=prompts)
+
+
+@app.get("/v1/yac/structured_functions")
+def yac_structured_functions():
+    """Return the structured function registry for frontend consumption."""
+    return JSONResponse(content=export_registry_json())
 
 
 @app.get("/v1/yac/benchmark_analysis")
