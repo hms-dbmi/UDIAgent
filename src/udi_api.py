@@ -177,8 +177,14 @@ ORCHESTRATOR_TOOLS = [
                                     "items": {
                                         "type": "object",
                                         "properties": {
-                                            "field_name": {"type": "string", "description": "The actual field name in the schema."},
-                                            "entity": {"type": "string", "description": "The dataset entity this field belongs to."},
+                                            "field_name": {
+                                                "type": "string",
+                                                "description": "The actual field name in the schema.",
+                                            },
+                                            "entity": {
+                                                "type": "string",
+                                                "description": "The dataset entity this field belongs to.",
+                                            },
                                         },
                                         "required": ["field_name", "entity"],
                                         "additionalProperties": False,
@@ -444,13 +450,11 @@ def _handle_rebuff(tool_args: dict, request, use_pipeline: bool):
         except (json.JSONDecodeError, IndexError):
             response_data = {
                 "message": f"Sorry, I cannot fulfill this request. {tool_args.get('reason', '')}",
-                "capabilities": available_capabilities,
                 "suggestions": [],
             }
     else:
         response_data = {
             "message": f"Sorry, I cannot fulfill this request. {tool_args.get('reason', '')}",
-            "capabilities": available_capabilities,
             "suggestions": [],
         }
 
@@ -514,7 +518,11 @@ def _handle_free_text_explain(tool_args: dict, request, use_pipeline: bool):
     resolved_text = text_response
     if not validation_errors:
         try:
-            schema_dict = json.loads(request.dataSchema) if isinstance(request.dataSchema, str) else request.dataSchema
+            schema_dict = (
+                json.loads(request.dataSchema)
+                if isinstance(request.dataSchema, str)
+                else request.dataSchema
+            )
             schema_parsed = parse_schema_from_dict(schema_dict)
             resolved_text = resolve_structured_text(text_response, schema_parsed)
         except Exception:
