@@ -131,6 +131,50 @@ def resolve_structured_text(text, schema):
     return _FUNC_REF_PATTERN.sub(replacer, text)
 
 
+def segment_structured_text(text, schema):
+    """Segment text into a mixed list of plain strings and structured element objects.
+
+    Each structured element {function_name(args)} becomes an object with:
+      - "expression": the raw function reference (e.g. "{entity_count()}")
+      - "value": the resolved value from the schema
+
+    Plain text between function references is kept as-is (strings).
+    Returns (segments list, has_structured_elements bool).
+    """
+    segments = []
+    last_end = 0
+
+    for match in _FUNC_REF_PATTERN.finditer(text):
+        # Add plain text before this match
+        if match.start() > last_end:
+            segments.append(text[last_end:match.start()])
+
+        func_name = match.group(1)
+        args_str = match.group(2)
+        expression = match.group(0)
+
+        # Resolve the value
+        if func_name in FUNCTION_REGISTRY:
+            func, min_args, max_args, _ = FUNCTION_REGISTRY[func_name]
+            args = _ARG_PATTERN.findall(args_str) if args_str.strip() else []
+            try:
+                value = func(schema, *args)
+            except Exception:
+                value = expression
+        else:
+            value = expression
+
+        segments.append({"expression": expression, "value": value})
+        last_end = match.end()
+
+    # Add any trailing plain text
+    if last_end < len(text):
+        segments.append(text[last_end:])
+
+    has_structured = any(isinstance(s, dict) for s in segments)
+    return segments, has_structured
+
+
 def get_function_signatures():
     """Return the function registry as a list of signature descriptions.
 

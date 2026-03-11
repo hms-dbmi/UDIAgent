@@ -25,7 +25,7 @@ from vis_generate import (
 )
 from structured_functions import (
     validate_structured_text,
-    resolve_structured_text,
+    segment_structured_text,
     get_function_signatures,
     export_registry_json,
 )
@@ -514,8 +514,7 @@ def _handle_free_text_explain(tool_args: dict, request, use_pipeline: bool):
     # Validate structured function references
     validation_errors = validate_structured_text(text_response)
 
-    # Resolve structured text server-side for clients that don't support it
-    resolved_text = text_response
+    # Segment text into mixed list of plain strings and structured element objects
     if not validation_errors:
         try:
             schema_dict = (
@@ -524,17 +523,22 @@ def _handle_free_text_explain(tool_args: dict, request, use_pipeline: bool):
                 else request.dataSchema
             )
             schema_parsed = parse_schema_from_dict(schema_dict)
-            resolved_text = resolve_structured_text(text_response, schema_parsed)
+            text_segments, has_structured = segment_structured_text(
+                text_response, schema_parsed
+            )
         except Exception:
-            resolved_text = text_response
+            text_segments = [text_response]
+            has_structured = False
+    else:
+        text_segments = [text_response]
+        has_structured = False
 
     return {
         "name": "FreeTextExplain",
         "arguments": {
-            "response_type": "text",
-            "text": text_response,
-            "resolved_text": resolved_text,
-            "validation_errors": validation_errors,
+            "response_type": tool_args.get("response_type", "general"),
+            "text": text_segments,
+            "has_structured_elements": has_structured,
         },
     }
 
