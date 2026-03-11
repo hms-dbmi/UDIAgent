@@ -119,6 +119,60 @@ ORCHESTRATOR_TOOLS = [
     {
         "type": "function",
         "function": {
+            "name": "ClarifyVariable",
+            "description": (
+                "Use this tool when the user's request references an ambiguous variable "
+                "that could match multiple fields or entities in the dataset. For example, "
+                "'age' might match 'age_value' in donors or 'sample_age' in samples. "
+                "Returns a clarification request with candidate variables for the user "
+                "to choose from."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "message": {
+                        "type": "string",
+                        "description": "A natural-language explanation of what is ambiguous and why clarification is needed.",
+                    },
+                    "ambiguous_variables": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "query_term": {
+                                    "type": "string",
+                                    "description": "The term from the user's request that is ambiguous.",
+                                },
+                                "candidates": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "object",
+                                        "properties": {
+                                            "field_name": {"type": "string", "description": "The actual field name in the schema."},
+                                            "entity": {"type": "string", "description": "The dataset entity this field belongs to."},
+                                            "data_type": {"type": "string", "description": "The field's data type."},
+                                            "description": {"type": "string", "description": "Brief description of the field."},
+                                        },
+                                        "required": ["field_name", "entity", "data_type", "description"],
+                                        "additionalProperties": False,
+                                    },
+                                    "description": "Candidate fields that could match the ambiguous term.",
+                                },
+                            },
+                            "required": ["query_term", "candidates"],
+                            "additionalProperties": False,
+                        },
+                        "description": "List of ambiguous variables with their candidate matches.",
+                    },
+                },
+                "required": ["message", "ambiguous_variables"],
+                "additionalProperties": False,
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
             "name": "CreateVisualization",
             "description": (
                 "Create a data visualization. Supports: bar charts (vertical/horizontal, "
@@ -346,6 +400,21 @@ def _handle_rebuff(tool_args: dict, request, use_pipeline: bool):
     }
 
 
+def _handle_clarify_variable(tool_args: dict, request, use_pipeline: bool):
+    """Dispatch handler for ClarifyVariable tool calls.
+
+    Returns the clarification message and ambiguous variables directly
+    since the LLM already provides the structured data via tool calling.
+    """
+    return {
+        "name": "ClarifyVariable",
+        "arguments": {
+            "message": tool_args.get("message", ""),
+            "ambiguous_variables": tool_args.get("ambiguous_variables", []),
+        },
+    }
+
+
 def _handle_filter_data(tool_args: dict, request, use_pipeline: bool):
     """Dispatch handler for FilterData tool calls.
 
@@ -370,6 +439,7 @@ def _handle_filter_data(tool_args: dict, request, use_pipeline: bool):
 # Dispatch dict: tool name -> handler function
 TOOL_DISPATCH = {
     "Rebuff": _handle_rebuff,
+    "ClarifyVariable": _handle_clarify_variable,
     "CreateVisualization": _handle_create_visualization,
     "FilterData": _handle_filter_data,
 }
@@ -418,6 +488,7 @@ def orchestrate_tool_calls(
     has_vis = False
     has_filter = False
     has_rebuff = False
+    has_clarify = False
 
     for tc in choice.message.tool_calls:
         tool_name = tc.function.name
@@ -437,9 +508,13 @@ def orchestrate_tool_calls(
             has_filter = True
         elif tool_name == "Rebuff":
             has_rebuff = True
+        elif tool_name == "ClarifyVariable":
+            has_clarify = True
 
     # Derive orchestrator_choice for backward compatibility
-    if has_rebuff:
+    if has_clarify:
+        orchestrator_choice = "clarify-variable"
+    elif has_rebuff:
         orchestrator_choice = "rebuff"
     elif has_vis and has_filter:
         orchestrator_choice = "both"
