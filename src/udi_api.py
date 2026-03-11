@@ -255,7 +255,7 @@ def _handle_create_visualization(tool_args: dict, request, use_pipeline: bool):
 
     title = tool_args.get("title", "")
     if title:
-        result["title"] = title
+        result["arguments"]["title"] = title
 
     return result
 
