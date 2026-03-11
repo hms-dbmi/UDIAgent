@@ -173,6 +173,39 @@ ORCHESTRATOR_TOOLS = [
     {
         "type": "function",
         "function": {
+            "name": "FreeTextExplain",
+            "description": (
+                "Use this tool when the user asks an informational question — about "
+                "available functionality, datasets, or general system capabilities — "
+                "that does NOT require generating a visualization or filtering data. "
+                "For example: 'what can I do?', 'what data is available?', 'how many "
+                "tables are there?', 'what types of charts can you make?'"
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "user_request": {
+                        "type": "string",
+                        "description": "The original informational question from the user.",
+                    },
+                    "response_type": {
+                        "type": "string",
+                        "enum": ["capabilities", "data_summary", "general"],
+                        "description": (
+                            "The category of explanation needed: 'capabilities' for what the "
+                            "system can do, 'data_summary' for information about loaded datasets, "
+                            "'general' for other informational questions."
+                        ),
+                    },
+                },
+                "required": ["user_request", "response_type"],
+                "additionalProperties": False,
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
             "name": "CreateVisualization",
             "description": (
                 "Create a data visualization. Supports: bar charts (vertical/horizontal, "
@@ -400,6 +433,59 @@ def _handle_rebuff(tool_args: dict, request, use_pipeline: bool):
     }
 
 
+def _handle_free_text_explain(tool_args: dict, request, use_pipeline: bool):
+    """Dispatch handler for FreeTextExplain tool calls.
+
+    Generates a free-text response using the skill prompt, dynamically
+    injecting available tools and data schema context.
+    """
+    # Derive available capabilities from ORCHESTRATOR_TOOLS
+    available_tools = "\n".join(
+        f"- {t['function']['name']}: {t['function']['description']}"
+        for t in ORCHESTRATOR_TOOLS
+        if t["function"]["name"] not in ("Rebuff", "FreeTextExplain")
+    )
+
+    # Simplify data schema for LLM consumption
+    data_schema_simple = simplify_data_domains(request.dataDomains)
+
+    explain_skill = _skills.get("free_text_explain")
+    if explain_skill:
+        rendered = _render_template(
+            explain_skill.instructions,
+            {
+                "user_request": tool_args.get("user_request", ""),
+                "response_type": tool_args.get("response_type", "general"),
+                "available_tools": available_tools,
+                "data_schema": data_schema_simple,
+            },
+        )
+
+        resp = agent.gpt_model.chat.completions.create(
+            model=agent.gpt_model_name,
+            messages=[
+                {"role": "system", "content": rendered},
+                {
+                    "role": "user",
+                    "content": tool_args.get("user_request", ""),
+                },
+            ],
+            temperature=0.0,
+            max_completion_tokens=1024,
+        )
+        text_response = resp.choices[0].message.content
+    else:
+        text_response = "I can help you explore and visualize data. Try asking for a specific chart or data summary."
+
+    return {
+        "name": "FreeTextExplain",
+        "arguments": {
+            "response_type": "text",
+            "text": text_response,
+        },
+    }
+
+
 def _handle_clarify_variable(tool_args: dict, request, use_pipeline: bool):
     """Dispatch handler for ClarifyVariable tool calls.
 
@@ -440,6 +526,7 @@ def _handle_filter_data(tool_args: dict, request, use_pipeline: bool):
 TOOL_DISPATCH = {
     "Rebuff": _handle_rebuff,
     "ClarifyVariable": _handle_clarify_variable,
+    "FreeTextExplain": _handle_free_text_explain,
     "CreateVisualization": _handle_create_visualization,
     "FilterData": _handle_filter_data,
 }
@@ -489,6 +576,7 @@ def orchestrate_tool_calls(
     has_filter = False
     has_rebuff = False
     has_clarify = False
+    has_explain = False
 
     for tc in choice.message.tool_calls:
         tool_name = tc.function.name
@@ -510,9 +598,13 @@ def orchestrate_tool_calls(
             has_rebuff = True
         elif tool_name == "ClarifyVariable":
             has_clarify = True
+        elif tool_name == "FreeTextExplain":
+            has_explain = True
 
     # Derive orchestrator_choice for backward compatibility
-    if has_clarify:
+    if has_explain:
+        orchestrator_choice = "explain"
+    elif has_clarify:
         orchestrator_choice = "clarify-variable"
     elif has_rebuff:
         orchestrator_choice = "rebuff"
