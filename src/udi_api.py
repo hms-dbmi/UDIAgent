@@ -92,6 +92,33 @@ ORCHESTRATOR_TOOLS = [
     {
         "type": "function",
         "function": {
+            "name": "Rebuff",
+            "description": (
+                "Use this tool when the user's request CANNOT be fulfilled by any "
+                "other available tool. For example: requests about topics unrelated "
+                "to the loaded data, requests for unsupported chart types, or "
+                "requests that require capabilities the system does not have."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "user_request": {
+                        "type": "string",
+                        "description": "The original user query that cannot be fulfilled.",
+                    },
+                    "reason": {
+                        "type": "string",
+                        "description": "A brief explanation of why the request cannot be fulfilled.",
+                    },
+                },
+                "required": ["user_request", "reason"],
+                "additionalProperties": False,
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
             "name": "CreateVisualization",
             "description": (
                 "Create a data visualization. Supports: bar charts (vertical/horizontal, "
@@ -260,6 +287,65 @@ def _handle_create_visualization(tool_args: dict, request, use_pipeline: bool):
     return result
 
 
+def _handle_rebuff(tool_args: dict, request, use_pipeline: bool):
+    """Dispatch handler for Rebuff tool calls.
+
+    Generates a rebuff response with available capabilities derived from
+    the current tool set.
+    """
+    # Derive available capabilities from ORCHESTRATOR_TOOLS (excluding Rebuff itself)
+    available_capabilities = [
+        f"{t['function']['name']}: {t['function']['description']}"
+        for t in ORCHESTRATOR_TOOLS
+        if t["function"]["name"] != "Rebuff"
+    ]
+
+    rebuff_skill = _skills.get("rebuff")
+    if rebuff_skill:
+        rendered = _render_template(
+            rebuff_skill.instructions,
+            {
+                "user_request": tool_args.get("user_request", ""),
+                "reason": tool_args.get("reason", ""),
+                "available_tools": "\n".join(
+                    f"- {cap}" for cap in available_capabilities
+                ),
+            },
+        )
+
+        resp = agent.gpt_model.chat.completions.create(
+            model=agent.gpt_model_name,
+            messages=[
+                {"role": "system", "content": rendered},
+                {
+                    "role": "user",
+                    "content": tool_args.get("user_request", ""),
+                },
+            ],
+            temperature=0.0,
+            max_completion_tokens=1024,
+        )
+        try:
+            response_data = json.loads(resp.choices[0].message.content)
+        except (json.JSONDecodeError, IndexError):
+            response_data = {
+                "message": f"Sorry, I cannot fulfill this request. {tool_args.get('reason', '')}",
+                "capabilities": available_capabilities,
+                "suggestions": [],
+            }
+    else:
+        response_data = {
+            "message": f"Sorry, I cannot fulfill this request. {tool_args.get('reason', '')}",
+            "capabilities": available_capabilities,
+            "suggestions": [],
+        }
+
+    return {
+        "name": "Rebuff",
+        "arguments": response_data,
+    }
+
+
 def _handle_filter_data(tool_args: dict, request, use_pipeline: bool):
     """Dispatch handler for FilterData tool calls.
 
@@ -283,6 +369,7 @@ def _handle_filter_data(tool_args: dict, request, use_pipeline: bool):
 
 # Dispatch dict: tool name -> handler function
 TOOL_DISPATCH = {
+    "Rebuff": _handle_rebuff,
     "CreateVisualization": _handle_create_visualization,
     "FilterData": _handle_filter_data,
 }
@@ -330,6 +417,7 @@ def orchestrate_tool_calls(
     tool_calls = []
     has_vis = False
     has_filter = False
+    has_rebuff = False
 
     for tc in choice.message.tool_calls:
         tool_name = tc.function.name
@@ -347,9 +435,13 @@ def orchestrate_tool_calls(
             has_vis = True
         elif tool_name == "FilterData":
             has_filter = True
+        elif tool_name == "Rebuff":
+            has_rebuff = True
 
     # Derive orchestrator_choice for backward compatibility
-    if has_vis and has_filter:
+    if has_rebuff:
+        orchestrator_choice = "rebuff"
+    elif has_vis and has_filter:
         orchestrator_choice = "both"
     elif has_filter:
         orchestrator_choice = "get-subset-of-data"
