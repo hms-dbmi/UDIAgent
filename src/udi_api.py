@@ -179,10 +179,8 @@ ORCHESTRATOR_TOOLS = [
                                         "properties": {
                                             "field_name": {"type": "string", "description": "The actual field name in the schema."},
                                             "entity": {"type": "string", "description": "The dataset entity this field belongs to."},
-                                            "data_type": {"type": "string", "description": "The field's data type."},
-                                            "description": {"type": "string", "description": "Brief description of the field."},
                                         },
-                                        "required": ["field_name", "entity", "data_type", "description"],
+                                        "required": ["field_name", "entity"],
                                         "additionalProperties": False,
                                     },
                                     "description": "Candidate fields that could match the ambiguous term.",
@@ -536,14 +534,45 @@ def _handle_free_text_explain(tool_args: dict, request, use_pipeline: bool):
 def _handle_clarify_variable(tool_args: dict, request, use_pipeline: bool):
     """Dispatch handler for ClarifyVariable tool calls.
 
-    Returns the clarification message and ambiguous variables directly
-    since the LLM already provides the structured data via tool calling.
+    Enriches the LLM-provided candidates with data_type and description
+    looked up from the data schema, so the LLM only needs to provide
+    field_name and entity.
     """
+    # Parse the data schema to look up field metadata
+    try:
+        schema_raw = (
+            json.loads(request.dataSchema)
+            if isinstance(request.dataSchema, str)
+            else request.dataSchema
+        )
+    except (json.JSONDecodeError, TypeError):
+        schema_raw = {}
+
+    # Build a lookup: (entity, field_name) -> {data_type, description}
+    field_meta = {}
+    for resource in schema_raw.get("resources", []):
+        entity_name = resource.get("name", "")
+        for field in resource.get("schema", {}).get("fields", []):
+            fname = field.get("name", "")
+            field_meta[(entity_name, fname)] = {
+                "data_type": field.get("udi:data_type", "unknown"),
+                "description": field.get("description", "").strip(),
+            }
+
+    # Enrich each candidate with data_type and description from the schema
+    ambiguous_variables = tool_args.get("ambiguous_variables", [])
+    for var in ambiguous_variables:
+        for candidate in var.get("candidates", []):
+            key = (candidate.get("entity", ""), candidate.get("field_name", ""))
+            meta = field_meta.get(key, {})
+            candidate["data_type"] = meta.get("data_type", "unknown")
+            candidate["description"] = meta.get("description", "")
+
     return {
         "name": "ClarifyVariable",
         "arguments": {
             "message": tool_args.get("message", ""),
-            "ambiguous_variables": tool_args.get("ambiguous_variables", []),
+            "ambiguous_variables": ambiguous_variables,
         },
     }
 
