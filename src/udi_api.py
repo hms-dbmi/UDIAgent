@@ -23,6 +23,12 @@ from vis_generate import (
     _render_template,
     simplify_data_domains,
 )
+from structured_functions import (
+    validate_structured_text,
+    resolve_structured_text,
+    get_function_signatures,
+    export_registry_json,
+)
 
 # --- Logging setup ---
 _log_dir = Path(__file__).resolve().parent.parent / "logs"
@@ -82,6 +88,29 @@ if USE_VIS_PIPELINE:
     _pipeline_grammar = load_grammar("udi")
 
 _skills = load_skills()
+
+
+def parse_schema_from_dict(raw):
+    """Parse a data schema dict into the structure expected by structured_functions.
+
+    Similar to generate_tools.parse_schema but works with an in-memory dict
+    instead of a file path.
+    """
+    entities = {}
+    for resource in raw.get("resources", []):
+        name = resource["name"]
+        row_count = resource.get("udi:row_count", 0)
+        fields = {}
+        for field in resource.get("schema", {}).get("fields", []):
+            cardinality = field.get("udi:cardinality", 0)
+            if cardinality == 0:
+                continue
+            fields[field["name"]] = {
+                "type": field.get("udi:data_type", ""),
+                "cardinality": cardinality,
+            }
+        entities[name] = {"row_count": row_count, "fields": fields}
+    return {"entities": entities}
 
 
 # ---------------------------------------------------------------------------
@@ -436,8 +465,10 @@ def _handle_rebuff(tool_args: dict, request, use_pipeline: bool):
 def _handle_free_text_explain(tool_args: dict, request, use_pipeline: bool):
     """Dispatch handler for FreeTextExplain tool calls.
 
-    Generates a free-text response using the skill prompt, dynamically
-    injecting available tools and data schema context.
+    Generates a structured text response using the skill prompt, dynamically
+    injecting available tools, data schema, and structured function signatures.
+    The response may contain {function_name(args)} references that are validated
+    and optionally resolved server-side.
     """
     # Derive available capabilities from ORCHESTRATOR_TOOLS
     available_tools = "\n".join(
@@ -458,6 +489,7 @@ def _handle_free_text_explain(tool_args: dict, request, use_pipeline: bool):
                 "response_type": tool_args.get("response_type", "general"),
                 "available_tools": available_tools,
                 "data_schema": data_schema_simple,
+                "structured_functions": get_function_signatures(),
             },
         )
 
@@ -477,11 +509,26 @@ def _handle_free_text_explain(tool_args: dict, request, use_pipeline: bool):
     else:
         text_response = "I can help you explore and visualize data. Try asking for a specific chart or data summary."
 
+    # Validate structured function references
+    validation_errors = validate_structured_text(text_response)
+
+    # Resolve structured text server-side for clients that don't support it
+    resolved_text = text_response
+    if not validation_errors:
+        try:
+            schema_dict = json.loads(request.dataSchema) if isinstance(request.dataSchema, str) else request.dataSchema
+            schema_parsed = parse_schema_from_dict(schema_dict)
+            resolved_text = resolve_structured_text(text_response, schema_parsed)
+        except Exception:
+            resolved_text = text_response
+
     return {
         "name": "FreeTextExplain",
         "arguments": {
             "response_type": "text",
             "text": text_response,
+            "resolved_text": resolved_text,
+            "validation_errors": validation_errors,
         },
     }
 
@@ -687,6 +734,12 @@ def yac_examples():
         data = json.load(f)
     prompts = [item["input"]["messages"][0]["content"] for item in data]
     return JSONResponse(content=prompts)
+
+
+@app.get("/v1/yac/structured_functions")
+def yac_structured_functions():
+    """Return the structured function registry for frontend consumption."""
+    return JSONResponse(content=export_registry_json())
 
 
 @app.get("/v1/yac/benchmark_analysis")
