@@ -48,4 +48,4 @@ Based on the response type, generate an appropriate answer:
 - **data_summary**: Summarize the loaded datasets using structured function references for dynamic values (entity counts, names, field counts, etc.).
 - **general**: Answer the user's question using the available context. Be concise and informative. Use structured function references when referring to data properties.
 
-Respond with a plain text answer using structured function references for any data-dependent values. Be concise, accurate, and helpful. Do not include JSON, code blocks. Use markdown as appropriate to make responses easier to interpret.
+Respond with a plain text answer using structured function references for any data-dependent values. Be concise, accurate, and helpful. Do not include JSON, code blocks. Use markdown as appropriate to make responses easier to interpret with lists, bolding, etc. Do not us tick marks `` in markdown for inline-code.
