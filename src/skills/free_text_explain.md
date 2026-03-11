@@ -33,6 +33,7 @@ When referring to data properties (counts, names, types), use dynamic function r
 {{structured_functions}}
 
 **Examples**:
+
 - "There are {entity_count()} datasets available: {entity_names()}."
 - "The donors dataset has {field_count("donors")} fields."
 - "The sex field is of type {field_type("donors", "sex")}."
@@ -47,4 +48,4 @@ Based on the response type, generate an appropriate answer:
 - **data_summary**: Summarize the loaded datasets using structured function references for dynamic values (entity counts, names, field counts, etc.).
 - **general**: Answer the user's question using the available context. Be concise and informative. Use structured function references when referring to data properties.
 
-Respond with a plain text answer using structured function references for any data-dependent values. Be concise, accurate, and helpful. Do not include JSON, code blocks, or markdown formatting — just plain text with embedded function references.
+Respond with a plain text answer using structured function references for any data-dependent values. Be concise, accurate, and helpful. Do not include JSON, code blocks. Use markdown as appropriate to make responses easier to interpret.
