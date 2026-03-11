@@ -50,9 +50,9 @@ def _row_count(schema, entity):
     return str(entity_info.get("row_count", 0))
 
 
-def _sample_values(schema, entity, field):
-    """Return sample values for a field (placeholder — requires live data access)."""
-    return f"[sample values for {entity}.{field}]"
+# def _sample_values(schema, entity, field):
+#     """Return sample values for a field (placeholder — requires live data access)."""
+#     return f"[sample values for {entity}.{field}]"
 
 
 # Registry: function_name -> (implementation, min_args, max_args, description)
@@ -63,7 +63,7 @@ FUNCTION_REGISTRY = {
     "field_names": (_field_names, 1, 1, "Returns a comma-separated list of field names. Args: entity_name"),
     "field_type": (_field_type, 2, 2, "Returns the data type of a field. Args: entity_name, field_name"),
     "row_count": (_row_count, 1, 1, "Returns the row count for an entity. Args: entity_name"),
-    "sample_values": (_sample_values, 2, 2, "Returns sample values for a field. Args: entity_name, field_name"),
+    # "sample_values": (_sample_values, 2, 2, "Returns sample values for a field. Args: entity_name, field_name"),
 }
 
 
