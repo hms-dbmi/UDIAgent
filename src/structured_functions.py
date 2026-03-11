@@ -131,11 +131,26 @@ def resolve_structured_text(text, schema):
     return _FUNC_REF_PATTERN.sub(replacer, text)
 
 
+def _human_readable(func_name, args):
+    """Convert a function name and args into a human-readable label.
+
+    Examples:
+        entity_count, []           -> "entity count"
+        field_count, ["donors"]    -> "field count of donors"
+        field_type, ["donors", "sex"] -> "field type of donors > sex"
+    """
+    label = func_name.replace("_", " ")
+    if args:
+        label += " of " + " > ".join(args)
+    return label
+
+
 def segment_structured_text(text, schema):
     """Segment text into a mixed list of plain strings and structured element objects.
 
     Each structured element {function_name(args)} becomes an object with:
       - "expression": the raw function reference (e.g. "{entity_count()}")
+      - "label": a human-readable description (e.g. "entity count")
       - "value": the resolved value from the schema
 
     Plain text between function references is kept as-is (strings).
@@ -152,11 +167,11 @@ def segment_structured_text(text, schema):
         func_name = match.group(1)
         args_str = match.group(2)
         expression = match.group(0)
+        args = _ARG_PATTERN.findall(args_str) if args_str.strip() else []
 
         # Resolve the value
         if func_name in FUNCTION_REGISTRY:
             func, min_args, max_args, _ = FUNCTION_REGISTRY[func_name]
-            args = _ARG_PATTERN.findall(args_str) if args_str.strip() else []
             try:
                 value = func(schema, *args)
             except Exception:
@@ -164,7 +179,8 @@ def segment_structured_text(text, schema):
         else:
             value = expression
 
-        segments.append({"expression": expression, "value": value})
+        label = _human_readable(func_name, args)
+        segments.append({"expression": expression, "label": label, "value": value})
         last_end = match.end()
 
     # Add any trailing plain text
