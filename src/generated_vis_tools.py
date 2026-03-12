@@ -631,7 +631,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'entity, displayed as a vertical bar chart. Design: Cross-entity join groups by a field '
                               'not native to the counted entity. Vertical orientation for small category counts (<=4). '
                               'Tasks: Compare counts across categories from a related entity; discover cross-entity '
-                              'distribution patterns. Query patterns: How many <E1> are there, grouped by <E2.F:n>?',
+                              'frequency patterns. Query patterns: How many <E1> are there, grouped by <E2.F:n>?',
                'name': 'vis_002_barchart_join_count_vert_grouped',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity1': {'description': 'The primary data entity (table).',
@@ -647,7 +647,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
  {'function': {'description': '[barchart] Joins two entities and counts records grouped by a field from the related '
                               'entity, displayed as a horizontal bar chart. Design: Cross-entity join with horizontal '
                               'orientation for higher category counts (>4). Tasks: Compare counts across categories '
-                              'from a related entity; discover cross-entity distribution patterns. Query patterns: How '
+                              'from a related entity; discover cross-entity frequency patterns. Query patterns: How '
                               'many <E1> are there, grouped by <E2.F:n>?',
                'name': 'vis_003_barchart_join_count_horiz_grouped',
                'parameters': {'additionalProperties': False,
@@ -1180,7 +1180,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
   'type': 'function'},
  {'function': {'description': '[table] Lists all distinct values of a nominal field with their counts, displayed as a '
                               'table with in-cell bar marks. Design: Groups by the nominal field and counts '
-                              'occurrences. In-cell bars provide visual proportion comparison. Tasks: Determine the '
+                              'occurrences. In-cell bars provide visual frequency comparison. Tasks: Determine the '
                               'range (distinct values) of a nominal field; compare category frequencies. Query '
                               'patterns: What is the range of <E> <F:n> values?',
                'name': 'vis_037_table_count_distinct',
