@@ -21,3 +21,7 @@ dependencies = [
 test = [
     "pytest>=8.0.0",
 ]
+codegen = [
+    "pandas>=2.0.0",
+    "udi-grammar-py",
+]

@@ -26,6 +26,20 @@ This is the endpoint that is called by the YAC frontend. The `udi_api.py` script
 | LANGFUSE_PUBLIC_KEY | `LANGFUSE_PUBLIC_KEY=pk-your-key-goes-here`            | Optional, used for integration with LangFuse observability/tracing.                                                                                                                                  |
 | LANGFUSE_BASE_URL   | `LANGFUSE_BASE_URL=https://your-langfuse-instance.com` | Optional, used for integration with LangFuse observability/tracing.                                                                                                                                  |
 
+# Regenerating template visualizations
+
+The file `src/skills/template_visualizations.json` contains the template visualization specs used by the vis pipeline. To regenerate it:
+
+```bash
+# Install the codegen dependencies (one-time)
+uv pip install -e ".[codegen]"
+
+# Run the generation script
+uv run python scripts/template_viz_generation.py
+```
+
+This writes to `src/skills/template_visualizations.json` by default. Use `-o <path>` to write elsewhere.
+
 # benchmarking process
 
 ## Step 0: Start the API server
