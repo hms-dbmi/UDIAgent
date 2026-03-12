@@ -53,7 +53,7 @@ SECRET_KEY = os.getenv("JWT_SECRET_KEY")
 ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
 MODEL_NAME = os.getenv("UDI_MODEL_NAME")
 TOKENIZER_NAME = os.getenv("UDI_TOKENIZER_NAME", MODEL_NAME)
-INSECURE_DEV_MODE = os.getenv("INSECURE_DEV_MODE", "0") == "1"
+INSECURE_DEV_MODE = int(os.getenv("INSECURE_DEV_MODE", "0")) == 1
 VLLM_SERVER_URL = os.getenv("VLLM_SERVER_URL", "http://localhost")
 VLLM_SERVER_PORT = int(os.getenv("VLLM_SERVER_PORT", "55001"))
 
@@ -72,6 +72,7 @@ app.add_middleware(
 )
 
 GPT_MODEL_NAME = os.getenv("GPT_MODEL_NAME", "gpt-5.4")
+USE_VIS_PIPELINE = int(os.getenv("USE_VIS_PIPELINE", "0")) == 1
 
 # init agent
 agent = UDIAgent(
@@ -80,9 +81,9 @@ agent = UDIAgent(
     vllm_server_url=VLLM_SERVER_URL,
     vllm_server_port=VLLM_SERVER_PORT,
     tokenizer_name=TOKENIZER_NAME,
+    use_vis_pipeline=USE_VIS_PIPELINE,
 )
 
-USE_VIS_PIPELINE = os.getenv("USE_VIS_PIPELINE", "0") == "1"
 
 if USE_VIS_PIPELINE:
     _pipeline_grammar = load_grammar("udi")
@@ -380,7 +381,9 @@ class YACBenchmarkCompletionRequest(BaseModel):
 # ---------------------------------------------------------------------------
 
 
-def _handle_create_visualization(tool_args: dict, request, use_pipeline: bool):
+def _handle_create_visualization(
+    tool_args: dict, request, use_pipeline: bool, openai_api_key: str | None = None
+):
     """Dispatch handler for CreateVisualization tool calls.
 
     Uses the tool call's ``description`` argument as the user message so that
@@ -396,9 +399,13 @@ def _handle_create_visualization(tool_args: dict, request, use_pipeline: bool):
         ] + [{"role": "user", "content": description}]
 
     if use_pipeline:
-        result = function_call_render_visualization_pipeline(focused)
+        result = function_call_render_visualization_pipeline(
+            focused, openai_api_key=openai_api_key
+        )
     else:
-        result = function_call_render_visualization_legacy(focused)
+        result = function_call_render_visualization_legacy(
+            focused, openai_api_key=openai_api_key
+        )
 
     title = tool_args.get("title", "")
     if title:
@@ -407,7 +414,9 @@ def _handle_create_visualization(tool_args: dict, request, use_pipeline: bool):
     return result
 
 
-def _handle_rebuff(tool_args: dict, request, use_pipeline: bool):
+def _handle_rebuff(
+    tool_args: dict, request, use_pipeline: bool, openai_api_key: str | None = None
+):
     """Dispatch handler for Rebuff tool calls.
 
     Generates a rebuff response with available capabilities derived from
@@ -432,8 +441,8 @@ def _handle_rebuff(tool_args: dict, request, use_pipeline: bool):
                 ),
             },
         )
-
-        resp = agent.gpt_model.chat.completions.create(
+        gpt_client = agent._get_gpt_client(openai_api_key)
+        resp = gpt_client.chat.completions.create(
             model=agent.gpt_model_name,
             messages=[
                 {"role": "system", "content": rendered},
@@ -464,7 +473,9 @@ def _handle_rebuff(tool_args: dict, request, use_pipeline: bool):
     }
 
 
-def _handle_free_text_explain(tool_args: dict, request, use_pipeline: bool):
+def _handle_free_text_explain(
+    tool_args: dict, request, use_pipeline: bool, openai_api_key: str | None = None
+):
     """Dispatch handler for FreeTextExplain tool calls.
 
     Generates a structured text response using the skill prompt, dynamically
@@ -494,8 +505,8 @@ def _handle_free_text_explain(tool_args: dict, request, use_pipeline: bool):
                 "structured_functions": get_function_signatures(),
             },
         )
-
-        resp = agent.gpt_model.chat.completions.create(
+        gpt_client = agent._get_gpt_client(openai_api_key)
+        resp = gpt_client.chat.completions.create(
             model=agent.gpt_model_name,
             messages=[
                 {"role": "system", "content": rendered},
@@ -626,7 +637,9 @@ TOOL_DISPATCH = {
 
 
 def orchestrate_tool_calls(
-    request: YACCompletionRequest, use_pipeline: bool = USE_VIS_PIPELINE
+    request: YACCompletionRequest,
+    use_pipeline: bool = USE_VIS_PIPELINE,
+    openai_api_key: str | None = None,
 ):
     """Use LLM tool calling to determine and execute the right actions.
 
@@ -644,7 +657,8 @@ def orchestrate_tool_calls(
     messages.insert(0, {"role": "system", "content": rendered})
 
     # Call LLM with tool definitions
-    resp = agent.gpt_model.chat.completions.create(
+    gpt_client = agent._get_gpt_client(openai_api_key)
+    resp = gpt_client.chat.completions.create(
         model=agent.gpt_model_name,
         messages=messages,
         tools=ORCHESTRATOR_TOOLS,
@@ -674,7 +688,9 @@ def orchestrate_tool_calls(
             print(f"Unknown tool: {tool_name}, skipping")
             continue
 
-        result = handler(tool_args, request, use_pipeline)
+        result = handler(
+            tool_args, request, use_pipeline, openai_api_key=openai_api_key
+        )
         tool_calls.append(result)
 
         if tool_name == "CreateVisualization":
@@ -710,16 +726,26 @@ def orchestrate_tool_calls(
 # ---------------------------------------------------------------------------
 
 
-def _run_legacy_orchestration(request, calls_to_make, use_pipeline):
+def _run_legacy_orchestration(
+    request, calls_to_make, use_pipeline, openai_api_key: str | None = None
+):
     """Run legacy if/else orchestration for backward-compatible benchmark overrides."""
     tool_calls = []
     if calls_to_make in ("both", "get-subset-of-data"):
-        tool_calls.extend(function_call_filter(request))
+        tool_calls.extend(function_call_filter(request, openai_api_key=openai_api_key))
     if calls_to_make in ("both", "render-visualization"):
         if use_pipeline:
-            tool_calls.append(function_call_render_visualization_pipeline(request))
+            tool_calls.append(
+                function_call_render_visualization_pipeline(
+                    request, openai_api_key=openai_api_key
+                )
+            )
         else:
-            tool_calls.append(function_call_render_visualization_legacy(request))
+            tool_calls.append(
+                function_call_render_visualization_legacy(
+                    request, openai_api_key=openai_api_key
+                )
+            )
     return tool_calls
 
 
@@ -735,7 +761,9 @@ def yac_completions(
     x_openai_key: str | None = Header(None, alias="X-OpenAI-Key"),
 ):
     split_tool_calls(request)
-    tool_calls, orchestrator_choice = orchestrate_tool_calls(request)
+    tool_calls, orchestrator_choice = orchestrate_tool_calls(
+        request, openai_api_key=x_openai_key
+    )
     logger.info("orchestrator_choice: %s", orchestrator_choice)
     logger.info("tool_calls: %s", tool_calls)
     return tool_calls
@@ -755,10 +783,14 @@ def yac_benchmark(
     if request.orchestrator_choice is not None:
         # Legacy path: explicit orchestrator_choice override for A/B testing
         calls_to_make = request.orchestrator_choice
-        tool_calls = _run_legacy_orchestration(request, calls_to_make, use_pipeline)
+        tool_calls = _run_legacy_orchestration(
+            request, calls_to_make, use_pipeline, openai_api_key=x_openai_key
+        )
     else:
         # New path: tool-calling orchestration
-        tool_calls, calls_to_make = orchestrate_tool_calls(request, use_pipeline)
+        tool_calls, calls_to_make = orchestrate_tool_calls(
+            request, use_pipeline, openai_api_key=x_openai_key
+        )
 
     return {"tool_calls": tool_calls, "orchestrator_choice": calls_to_make}
 

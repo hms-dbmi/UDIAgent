@@ -31,11 +31,13 @@ class UDIAgent:
         vllm_server_url=None,
         vllm_server_port=None,
         tokenizer_name: str = None,
+        use_vis_pipeline: bool = False,
     ):
         self.model_name = model_name
         self.tokenizer_name = tokenizer_name or model_name
         self.gpt_model_name = gpt_model_name
-        if vllm_server_port is not None and vllm_server_url is not None:
+        self.use_vis_pipeline = use_vis_pipeline
+        if (vllm_server_port is not None and vllm_server_url is not None) and not use_vis_pipeline:
             self.vllm_server_url = vllm_server_url
             self.vllm_server_port = vllm_server_port
             self.init_model_connection()
