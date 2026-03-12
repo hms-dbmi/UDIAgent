@@ -258,7 +258,7 @@ ORCHESTRATOR_TOOLS = [
                     },
                     "title": {
                         "type": "string",
-                        "description": "A short, informative title for the chart (e.g. 'Donor Count by Sex', 'Height vs Weight').",
+                        "description": "A short, informative title for the chart (e.g. 'Donor Count by Sex', 'Height vs Weight'). Do NOT include the value of the filter since that can change dynamically later.",
                     },
                 },
                 "required": ["description", "title"],
@@ -278,6 +278,10 @@ ORCHESTRATOR_TOOLS = [
             "parameters": {
                 "type": "object",
                 "properties": {
+                    "title": {
+                        "type": "string",
+                        "description": "A short, informative title for the filter (e.g. 'Donor Sex', 'Donor Age', 'Sample Assay Type').",
+                    },
                     "entity": {
                         "type": "string",
                         "description": "The entity (table) to filter.",
@@ -618,6 +622,7 @@ def _handle_filter_data(
     return {
         "name": "FilterData",
         "arguments": {
+            "title": tool_args.get("title", ""),
             "entity": tool_args["entity"],
             "field": tool_args["field"],
             "filter": filter_obj,
