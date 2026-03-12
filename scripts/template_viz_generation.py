@@ -1523,5 +1523,5 @@ if __name__ == "__main__":
     print(f"\nChart types: {df['chart_type'].value_counts().to_dict()}")
     print(f"Complexity: {df['chart_complexity'].value_counts().to_dict()}")
 
-    df.to_json("./out/template_visualizations.json", orient="records", indent=2)
-    print(f"\nExported to ./out/template_visualizations.json")
+    df.to_json("./src/skills/template_visualizations.json", orient="records", indent=2)
+    print(f"\nExported to ./src/skill/template_visualizations.json")
