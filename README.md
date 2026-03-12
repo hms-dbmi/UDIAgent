@@ -26,19 +26,37 @@ This is the endpoint that is called by the YAC frontend. The `udi_api.py` script
 | LANGFUSE_PUBLIC_KEY | `LANGFUSE_PUBLIC_KEY=pk-your-key-goes-here`            | Optional, used for integration with LangFuse observability/tracing.                                                                                                                                  |
 | LANGFUSE_BASE_URL   | `LANGFUSE_BASE_URL=https://your-langfuse-instance.com` | Optional, used for integration with LangFuse observability/tracing.                                                                                                                                  |
 
-# Regenerating template visualizations
+# Regenerating template visualizations and tool definitions
 
-The file `src/skills/template_visualizations.json` contains the template visualization specs used by the vis pipeline. To regenerate it:
+The vis pipeline uses two generated artifacts:
+- `src/skills/template_visualizations.json` — template visualization specs
+- `src/generated_vis_tools.py` — typed OpenAI function-calling tool definitions
+
+To regenerate both in one step:
 
 ```bash
 # Install the codegen dependencies (one-time)
 uv pip install -e ".[codegen]"
 
-# Run the generation script
-uv run python scripts/template_viz_generation.py
+# Regenerate templates + tool definitions
+uv run python scripts/regenerate_vis_tools.py
 ```
 
-This writes to `src/skills/template_visualizations.json` by default. Use `-o <path>` to write elsewhere.
+By default this uses `data/data_domains/hubmap_data_schema.json` as the schema. To use a different schema:
+
+```bash
+uv run python scripts/regenerate_vis_tools.py --schema data/data_domains/SenNet_domains.json
+```
+
+The individual scripts can also be run separately if needed:
+
+```bash
+# Step 1 only: generate template visualizations
+uv run python scripts/template_viz_generation.py
+
+# Step 2 only: generate typed tool definitions from existing templates
+uv run python src/generate_tools.py
+```
 
 # benchmarking process
 
