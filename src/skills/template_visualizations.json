@@ -49,7 +49,7 @@
     ],
     "description":"Joins two entities and counts records grouped by a field from the related entity, displayed as a vertical bar chart.",
     "design_considerations":"Cross-entity join groups by a field not native to the counted entity. Vertical orientation for small category counts (<=4).",
-    "tasks":"Compare counts across categories from a related entity; discover cross-entity distribution patterns."
+    "tasks":"Compare counts across categories from a related entity; discover cross-entity frequency patterns."
   },
   {
     "query_templates":[
@@ -65,7 +65,7 @@
     ],
     "description":"Joins two entities and counts records grouped by a field from the related entity, displayed as a horizontal bar chart.",
     "design_considerations":"Cross-entity join with horizontal orientation for higher category counts (>4).",
-    "tasks":"Compare counts across categories from a related entity; discover cross-entity distribution patterns."
+    "tasks":"Compare counts across categories from a related entity; discover cross-entity frequency patterns."
   },
   {
     "query_templates":[
@@ -633,7 +633,7 @@
       "Determine_Range"
     ],
     "description":"Lists all distinct values of a nominal field with their counts, displayed as a table with in-cell bar marks.",
-    "design_considerations":"Groups by the nominal field and counts occurrences. In-cell bars provide visual proportion comparison.",
+    "design_considerations":"Groups by the nominal field and counts occurrences. In-cell bars provide visual frequency comparison.",
     "tasks":"Determine the range (distinct values) of a nominal field; compare category frequencies."
   },
   {
