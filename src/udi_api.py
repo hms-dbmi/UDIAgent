@@ -600,7 +600,9 @@ def _handle_clarify_variable(tool_args: dict, request, use_pipeline: bool):
     }
 
 
-def _handle_filter_data(tool_args: dict, request, use_pipeline: bool):
+def _handle_filter_data(
+    tool_args: dict, request, use_pipeline: bool, openai_api_key: str | None = None
+):
     """Dispatch handler for FilterData tool calls.
 
     Builds a single FilterData result from the tool call arguments.
