@@ -554,7 +554,9 @@ def _handle_free_text_explain(
     }
 
 
-def _handle_clarify_variable(tool_args: dict, request, use_pipeline: bool):
+def _handle_clarify_variable(
+    tool_args: dict, request, use_pipeline: bool, openai_api_key: str | None = None
+):
     """Dispatch handler for ClarifyVariable tool calls.
 
     Enriches the LLM-provided candidates with data_type and description
