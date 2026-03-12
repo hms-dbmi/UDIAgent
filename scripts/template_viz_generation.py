@@ -2,6 +2,7 @@ import pandas as pd
 from udi_grammar_py import Chart, Op, rolling
 from enum import Enum
 
+
 class ChartType(Enum):
     SCATTERPLOT = "scatterplot"
     BARCHART = "barchart"
@@ -20,6 +21,7 @@ class ChartType(Enum):
     DOT = "dot"
     GROUPED_DOT = "grouped_dot"
 
+
 class TaskType(Enum):
     RETRIEVE_VALUE = "Retrieve_Value"
     FILTER = "Filter"
@@ -33,7 +35,16 @@ class TaskType(Enum):
     CORRELATE = "Correlate"
 
 
-def add_row(df, query_templates, spec, chart_type: ChartType, task_types: list[TaskType], description: str = "", design_considerations: str = "", tasks: str = ""):
+def add_row(
+    df,
+    query_templates,
+    spec,
+    chart_type: ChartType,
+    task_types: list[TaskType],
+    description: str = "",
+    design_considerations: str = "",
+    tasks: str = "",
+):
     spec_key_count = get_total_key_count(spec.to_dict())
     if spec_key_count <= 12:
         complexity = "simple"
@@ -53,9 +64,10 @@ def add_row(df, query_templates, spec, chart_type: ChartType, task_types: list[T
         "task_types": task_types,
         "description": description,
         "design_considerations": design_considerations,
-        "tasks": tasks
+        "tasks": tasks,
     }
     return df
+
 
 def get_total_key_count(nested_dict):
     if isinstance(nested_dict, dict):
@@ -64,6 +76,7 @@ def get_total_key_count(nested_dict):
         return sum(get_total_key_count(item) for item in nested_dict)
     else:
         return 1
+
 
 def generate():
     df = pd.DataFrame(
@@ -77,7 +90,7 @@ def generate():
             "task_types",
             "description",
             "design_considerations",
-            "tasks"
+            "tasks",
         ]
     )
 
@@ -148,9 +161,9 @@ def generate():
             .source("<E1>", "<E1.url>")
             .source("<E2>", "<E2.url>")
             .join(
-                in_name=['<E1>', '<E2>'],
-                on=['<E1.r.E2.id.from>', '<E1.r.E2.id.to>'],
-                out_name='<E1>__<E2>',
+                in_name=["<E1>", "<E2>"],
+                on=["<E1.r.E2.id.from>", "<E1.r.E2.id.to>"],
+                out_name="<E1>__<E2>",
             )
             .groupby("<E2.F>")
             .rollup({"<E1> count": Op.count()})
@@ -178,9 +191,9 @@ def generate():
             .source("<E1>", "<E1.url>")
             .source("<E2>", "<E2.url>")
             .join(
-                in_name=['<E1>', '<E2>'],
-                on=['<E1.r.E2.id.from>', '<E1.r.E2.id.to>'],
-                out_name='<E1>__<E2>',
+                in_name=["<E1>", "<E2>"],
+                on=["<E1.r.E2.id.from>", "<E1.r.E2.id.to>"],
+                out_name="<E1>__<E2>",
             )
             .groupby("<E2.F>")
             .rollup({"<E1> count": Op.count()})
@@ -212,9 +225,9 @@ def generate():
             .source("<E1>", "<E1.url>")
             .source("<E2>", "<E2.url>")
             .join(
-                in_name=['<E1>', '<E2>'],
-                on=['<E1.r.E2.id.from>', '<E1.r.E2.id.to>'],
-                out_name='<E1>__<E2>',
+                in_name=["<E1>", "<E2>"],
+                on=["<E1.r.E2.id.from>", "<E1.r.E2.id.to>"],
+                out_name="<E1>__<E2>",
             )
             .groupby(["<E2.F2>", "<E1.F1>"])
             .rollup({"count <E1>": Op.count()})
@@ -243,9 +256,9 @@ def generate():
             .source("<E1>", "<E1.url>")
             .source("<E2>", "<E2.url>")
             .join(
-                in_name=['<E1>', '<E2>'],
-                on=['<E1.r.E2.id.from>', '<E1.r.E2.id.to>'],
-                out_name='<E1>__<E2>',
+                in_name=["<E1>", "<E2>"],
+                on=["<E1.r.E2.id.from>", "<E1.r.E2.id.to>"],
+                out_name="<E1>__<E2>",
             )
             .groupby(["<E2.F2>", "<E1.F1>"])
             .rollup({"count <E1>": Op.count()})
@@ -444,7 +457,13 @@ def generate():
     # Aggregate bar charts — min/max/mean/median/sum
     # ---------------------------------------------------------------
 
-    for name, op in [('minimum', Op.min), ('maximum', Op.max), ('average', Op.mean), ('median', Op.median), ('total', Op.sum)]:
+    for name, op in [
+        ("minimum", Op.min),
+        ("maximum", Op.max),
+        ("average", Op.mean),
+        ("median", Op.median),
+        ("total", Op.sum),
+    ]:
         named_aggregate = f"{name} <F1>"
 
         # Horizontal, >4 categories
@@ -539,7 +558,7 @@ def generate():
         spec=(
             Chart()
             .source("<E>", "<E.url>")
-            .groupby(['<F1>', '<F2>'])
+            .groupby(["<F1>", "<F2>"])
             .rollup({"count": Op.count()})
             .mark("bar")
             .x(field="<F1>", type="nominal")
@@ -565,7 +584,7 @@ def generate():
         spec=(
             Chart()
             .source("<E>", "<E.url>")
-            .groupby(['<F1>', '<F2>'])
+            .groupby(["<F1>", "<F2>"])
             .rollup({"count": Op.count()})
             .mark("bar")
             .x(field="count", type="quantitative")
@@ -595,7 +614,7 @@ def generate():
         spec=(
             Chart()
             .source("<E>", "<E.url>")
-            .groupby('<F>')
+            .groupby("<F>")
             .rollup({"proportion": Op.frequency()})
             .mark("arc")
             .theta(field="proportion", type="quantitative")
@@ -620,7 +639,7 @@ def generate():
         spec=(
             Chart()
             .source("<E>", "<E.url>")
-            .groupby('<F>')
+            .groupby("<F>")
             .rollup({"proportion": Op.frequency()})
             .mark("arc")
             .theta(field="proportion", type="quantitative")
@@ -648,11 +667,7 @@ def generate():
         query_templates=[
             "How many <E> records are there?",
         ],
-        spec=(
-            Chart()
-            .source("<E>", "<E.url>")
-            .rollup({"<E> Records": Op.count()})
-        ),
+        spec=(Chart().source("<E>", "<E.url>").rollup({"<E> Records": Op.count()})),
         chart_type=ChartType.TABLE,
         task_types=[
             TaskType.COMPUTE_DERIVED_VALUE,
@@ -669,10 +684,7 @@ def generate():
             "What does the <E> data look like?",
             "Make a table of <E>?",
         ],
-        spec=(
-            Chart()
-            .source("<E>", "<E.url>")
-        ),
+        spec=(Chart().source("<E>", "<E.url>")),
         chart_type=ChartType.TABLE,
         task_types=[
             TaskType.DETERMINE_RANGE,
@@ -697,9 +709,9 @@ def generate():
             .source("<E1>", "<E1.url>")
             .source("<E2>", "<E2.url>")
             .join(
-                in_name=['<E1>', '<E2>'],
-                on=['<E1.r.E2.id.from>', '<E1.r.E2.id.to>'],
-                out_name='<E1>__<E2>',
+                in_name=["<E1>", "<E2>"],
+                on=["<E1.r.E2.id.from>", "<E1.r.E2.id.to>"],
+                out_name="<E1>__<E2>",
             )
         ),
         chart_type=ChartType.TABLE,
@@ -729,9 +741,9 @@ def generate():
             .source("<E1>", "<E1.url>")
             .source("<E2>", "<E2.url>")
             .join(
-                in_name=['<E1>', '<E2>'],
-                on=['<E1.r.E2.id.from>', '<E1.r.E2.id.to>'],
-                out_name='<E1>__<E2>',
+                in_name=["<E1>", "<E2>"],
+                on=["<E1.r.E2.id.from>", "<E1.r.E2.id.to>"],
+                out_name="<E1>__<E2>",
             )
             .groupby("<E1.r.E2.id.from>")
             .rollup({"<E1> count": Op.count()})
@@ -740,7 +752,14 @@ def generate():
             .derive({"most frequent": "d.rank == 1 ? 'yes' : 'no'"})
             .mark("row")
             .x(field="<E1> count", mark="bar", type="quantitative", domain={"min": 0})
-            .color(column="<E1> count", mark="bar", field="most frequent", type="nominal", domain=["yes", "no"], range=["#FFA500", "#c6cfd8"])
+            .color(
+                column="<E1> count",
+                mark="bar",
+                field="most frequent",
+                type="nominal",
+                domain=["yes", "no"],
+                range=["#FFA500", "#c6cfd8"],
+            )
             .mark("row")
             .text(field="*", mark="text", type="nominal")
         ),
@@ -769,8 +788,15 @@ def generate():
             .derive({"largest": "rank() == 1 ? 'largest' : 'not'"})
             .mark("row")
             .x(field="<F>", mark="bar", type="quantitative")
-            .color(column='<F>', mark='bar', field='largest', type='nominal', domain=['largest', 'not'], range=['#FFA500', 'c6cfd8'])
-            .text(field='*', mark='text', type='nominal')
+            .color(
+                column="<F>",
+                mark="bar",
+                field="largest",
+                type="nominal",
+                domain=["largest", "not"],
+                range=["#FFA500", "c6cfd8"],
+            )
+            .text(field="*", mark="text", type="nominal")
         ),
         chart_type=ChartType.TABLE,
         task_types=[
@@ -793,19 +819,26 @@ def generate():
             .source("<E1>", "<E1.url>")
             .source("<E2>", "<E2.url>")
             .join(
-                in_name=['<E1>', '<E2>'],
-                on=['<E1.r.E2.id.from>', '<E1.r.E2.id.to>'],
-                out_name='<E1>__<E2>',
+                in_name=["<E1>", "<E2>"],
+                on=["<E1.r.E2.id.from>", "<E1.r.E2.id.to>"],
+                out_name="<E1>__<E2>",
             )
             .groupby("<E1.r.E2.id.from>")
-            .rollup({"Largest <E1.F>": Op.max('<E1.F>')})
+            .rollup({"Largest <E1.F>": Op.max("<E1.F>")})
             .filter("d['Largest <E1.F>'] != null")
             .orderby("Largest <E1.F>", ascending=False)
             .derive({"rank": "rank()"})
             .derive({"largest": "d.rank == 1 ? 'yes' : 'no'"})
             .mark("row")
             .x(field="Largest <E1.F>", mark="bar", type="quantitative")
-            .color(column="Largest <E1.F>", mark="bar", field="largest", type="nominal", domain=["yes", "no"], range=["#FFA500", "#c6cfd8"])
+            .color(
+                column="Largest <E1.F>",
+                mark="bar",
+                field="largest",
+                type="nominal",
+                domain=["yes", "no"],
+                range=["#FFA500", "#c6cfd8"],
+            )
             .text(field="*", mark="text", type="nominal")
         ),
         chart_type=ChartType.TABLE,
@@ -832,8 +865,16 @@ def generate():
             .orderby("<F>")
             .derive({"smallest": "rank() == 1 ? 'smallest' : 'not'"})
             .mark("row")
-            .color(column='<F>', mark='rect', orderby='<F>', field='smallest', type='nominal', domain=['smallest', 'not'], range=['#ffdb9a', 'white'])
-            .text(field='*', mark='text', type='nominal')
+            .color(
+                column="<F>",
+                mark="rect",
+                orderby="<F>",
+                field="smallest",
+                type="nominal",
+                domain=["smallest", "not"],
+                range=["#ffdb9a", "white"],
+            )
+            .text(field="*", mark="text", type="nominal")
         ),
         chart_type=ChartType.TABLE,
         task_types=[
@@ -856,18 +897,26 @@ def generate():
             .source("<E1>", "<E1.url>")
             .source("<E2>", "<E2.url>")
             .join(
-                in_name=['<E1>', '<E2>'],
-                on=['<E1.r.E2.id.from>', '<E1.r.E2.id.to>'],
-                out_name='<E1>__<E2>',
+                in_name=["<E1>", "<E2>"],
+                on=["<E1.r.E2.id.from>", "<E1.r.E2.id.to>"],
+                out_name="<E1>__<E2>",
             )
             .groupby("<E1.r.E2.id.from>")
-            .rollup({"Smallest <E1.F>": Op.min('<E1.F>')})
+            .rollup({"Smallest <E1.F>": Op.min("<E1.F>")})
             .filter("d['Smallest <E1.F>'] != null")
             .orderby("Smallest <E1.F>", ascending=True)
             .derive({"rank": "rank()"})
             .derive({"smallest": "d.rank == 1 ? 'yes' : 'no'"})
             .mark("row")
-            .color(column="Smallest <E1.F>", mark="bar", orderby="Smallest <E1.F>", field="smallest", type="nominal", domain=["yes", "no"], range=["#ffdb9a", "white"])
+            .color(
+                column="Smallest <E1.F>",
+                mark="bar",
+                orderby="Smallest <E1.F>",
+                field="smallest",
+                type="nominal",
+                domain=["yes", "no"],
+                range=["#ffdb9a", "white"],
+            )
             .text(field="*", mark="text", type="nominal")
         ),
         chart_type=ChartType.TABLE,
@@ -896,8 +945,14 @@ def generate():
             .filter("d['<F>'] != null")
             .orderby("<F>")
             .mark("row")
-            .x(column='<F>', mark='bar', field='<F>', type='quantitative', range={'min': 0.2, 'max': 1})
-            .text(field='*', mark='text', type='nominal')
+            .x(
+                column="<F>",
+                mark="bar",
+                field="<F>",
+                type="quantitative",
+                range={"min": 0.2, "max": 1},
+            )
+            .text(field="*", mark="text", type="nominal")
         ),
         chart_type=ChartType.TABLE,
         task_types=[
@@ -918,13 +973,10 @@ def generate():
             Chart()
             .source("<E>", "<E.url>")
             .filter("d['<F>'] != null")
-            .rollup({
-                "<F> min": Op.min("<F>"),
-                "<F> max": Op.max("<F>")
-            })
+            .rollup({"<F> min": Op.min("<F>"), "<F> max": Op.max("<F>")})
             .mark("row")
-            .text(field="<F> min", mark='text', type='nominal')
-            .text(field="<F> max", mark='text', type='nominal')
+            .text(field="<F> min", mark="text", type="nominal")
+            .text(field="<F> max", mark="text", type="nominal")
         ),
         chart_type=ChartType.TABLE,
         task_types=[
@@ -946,10 +998,15 @@ def generate():
             .source("<E>", "<E.url>")
             .filter("d['<F>'] != null")
             .groupby("<F>")
-            .rollup({ "count": Op.count() })
+            .rollup({"count": Op.count()})
             .mark("row")
-            .text(field="<F>", mark='text', type='nominal')
-            .x(field="count", mark='bar', type='quantitative', range={'min': 0.1, 'max': 1})
+            .text(field="<F>", mark="text", type="nominal")
+            .x(
+                field="count",
+                mark="bar",
+                type="quantitative",
+                range={"min": 0.1, "max": 1},
+            )
         ),
         chart_type=ChartType.TABLE,
         task_types=[
@@ -971,18 +1028,27 @@ def generate():
             .source("<E>", "<E.url>")
             .filter("d['<F1>'] != null")
             .groupby("<F2>")
-            .rollup({
-                "<F1> min": Op.min("<F1>"),
-                "<F1> max": Op.max("<F1>")
-            })
+            .rollup({"<F1> min": Op.min("<F1>"), "<F1> max": Op.max("<F1>")})
             .derive({"range": "d['<F1> max'] - d['<F1> min']"})
             .orderby("range", ascending=False)
             .mark("row")
-            .text(field="<F2>", mark='text', type='nominal')
-            .text(field="<F1> min", mark='text', type='nominal')
-            .x(column="range", mark='bar', field="<F1> min", type='quantitative', domain={"numberFields": ["<F1> min", "<F1> max"]})
-            .x2(column="range", mark='bar', field="<F1> max", type='quantitative', domain={"numberFields": ["<F1> min", "<F1> max"]})
-            .text(field="<F1> max", mark='text', type='nominal')
+            .text(field="<F2>", mark="text", type="nominal")
+            .text(field="<F1> min", mark="text", type="nominal")
+            .x(
+                column="range",
+                mark="bar",
+                field="<F1> min",
+                type="quantitative",
+                domain={"numberFields": ["<F1> min", "<F1> max"]},
+            )
+            .x2(
+                column="range",
+                mark="bar",
+                field="<F1> max",
+                type="quantitative",
+                domain={"numberFields": ["<F1> min", "<F1> max"]},
+            )
+            .text(field="<F1> max", mark="text", type="nominal")
         ),
         chart_type=ChartType.TABLE,
         task_types=[
@@ -1009,10 +1075,25 @@ def generate():
             .derive({"rank": "rank()"})
             .derive({"most frequent": "d.rank == 1 ? 'yes' : 'no'"})
             .mark("row")
-            .color(column="<F>", mark="bar", orderby="<F>", field="most frequent", type="nominal", domain=["yes", "no"], range=["#ffdb9a", "white"])
+            .color(
+                column="<F>",
+                mark="bar",
+                orderby="<F>",
+                field="most frequent",
+                type="nominal",
+                domain=["yes", "no"],
+                range=["#ffdb9a", "white"],
+            )
             .text(field="<F>", mark="text", type="nominal")
             .x(field="count", mark="bar", type="quantitative", domain={"min": 0})
-            .color(column="count", mark="bar", field="most frequent", type="nominal", domain=["yes", "no"], range=["#FFA500", "#c6cfd8"])
+            .color(
+                column="count",
+                mark="bar",
+                field="most frequent",
+                type="nominal",
+                domain=["yes", "no"],
+                range=["#FFA500", "#c6cfd8"],
+            )
         ),
         chart_type=ChartType.TABLE,
         task_types=[
@@ -1041,7 +1122,7 @@ def generate():
             .source("<E>", "<E.url>")
             .filter("d['<F>'] != null")
             .orderby("<F>")
-            .derive({ "total": "count()" })
+            .derive({"total": "count()"})
             .derive({"percentile": rolling("count() / d.total")})
             .mark("line")
             .x(field="<F>", type="quantitative")
@@ -1069,7 +1150,7 @@ def generate():
             .filter("d['<F1>'] != null")
             .orderby("<F1>")
             .groupby("<F2>")
-            .derive({ "total": "count()" })
+            .derive({"total": "count()"})
             .derive({"percentile": rolling("count() / d.total")})
             .mark("line")
             .x(field="<F1>", type="quantitative")
@@ -1102,7 +1183,11 @@ def generate():
             .groupby(["<F2>", "<F1>"])
             .rollup({"count <E>": Op.count()})
             .derive({"udi_internal_percentile": "d['count <E>'] / max(d['count <E>'])"})
-            .derive({"udi_internal_text_color_threshold": "d.udi_internal_percentile > .5 ? 'large' : 'small'"})
+            .derive(
+                {
+                    "udi_internal_text_color_threshold": "d.udi_internal_percentile > .5 ? 'large' : 'small'"
+                }
+            )
             .mark("rect")
             .color(field="count <E>", type="quantitative")
             .y(field="<F1>", type="nominal")
@@ -1111,7 +1196,13 @@ def generate():
             .text(field="count <E>", type="quantitative")
             .y(field="<F1>", type="nominal")
             .x(field="<F2>", type="nominal")
-            .color(field="udi_internal_text_color_threshold", type="nominal", domain=["large", "small"], range=["white", "black"], omitLegend=True)
+            .color(
+                field="udi_internal_text_color_threshold",
+                type="nominal",
+                domain=["large", "small"],
+                range=["white", "black"],
+                omitLegend=True,
+            )
         ),
         chart_type=ChartType.HEATMAP,
         task_types=[
@@ -1125,7 +1216,7 @@ def generate():
     )
 
     # Aggregate heatmap (average over two nominal fields)
-    for name, op in [('average', Op.mean)]:
+    for name, op in [("average", Op.mean)]:
         named_aggregate = f"{name} <F1>"
         df = add_row(
             df,
@@ -1194,11 +1285,7 @@ def generate():
             Chart()
             .source("<E>", "<E.url>")
             .filter("d['<F>'] != null")
-            .binby(
-                field="<F>",
-                output={
-                    "bin_start": "start",
-                    "bin_end": "end"})
+            .binby(field="<F>", output={"bin_start": "start", "bin_end": "end"})
             .rollup({"count": Op.count()})
             .mark("rect")
             .x(field="start", type="quantitative")
@@ -1229,9 +1316,8 @@ def generate():
             .filter("d['<F>'] != null")
             .kde(
                 field="<F>",
-                output={
-                    "sample": "<F>",
-                    "density": "density"},)
+                output={"sample": "<F>", "density": "density"},
+            )
             .mark("area")
             .x(field="<F>", type="quantitative")
             .y(field="density", type="quantitative")
@@ -1283,15 +1369,14 @@ def generate():
             .groupby("<F2>")
             .kde(
                 field="<F1>",
-                output={
-                    "sample": "<F1>",
-                    "density": "density"},)
+                output={"sample": "<F1>", "density": "density"},
+            )
             .mark("area")
             .x(field="<F1>", type="quantitative")
             .color(field="<F2>", type="nominal")
             .y(field="density", type="quantitative")
             .opacity(value=0.25)
-            .mark('line')
+            .mark("line")
             .x(field="<F1>", type="quantitative")
             .color(field="<F2>", type="nominal")
             .y(field="density", type="quantitative")
@@ -1344,16 +1429,25 @@ def generate():
             .source("<E>", "<E.url>")
             .derive({"<E> Count": "count()"})
             .filter("d['<F>'] != null")
-            .rollup({
-                "Valid <F> Count": Op.count(),
-                "<E> Count": Op.median("<E> Count")
-            })
+            .rollup(
+                {"Valid <F> Count": Op.count(), "<E> Count": Op.median("<E> Count")}
+            )
             .derive({"Valid <F> %": "d['Valid <F> Count'] / d['<E> Count']"})
             .mark("row")
-            .text(field="Valid <F> Count", mark='text', type='nominal')
-            .text(field="<E> Count", mark='text', type='nominal')
-            .x(field="Valid <F> %", mark='bar', type='quantitative', domain={"min": 0, "max": 1})
-            .y(field="Valid <F> %", mark='line', type='quantitative', range={"min": 0.5, "max": 0.5})
+            .text(field="Valid <F> Count", mark="text", type="nominal")
+            .text(field="<E> Count", mark="text", type="nominal")
+            .x(
+                field="Valid <F> %",
+                mark="bar",
+                type="quantitative",
+                domain={"min": 0, "max": 1},
+            )
+            .y(
+                field="Valid <F> %",
+                mark="line",
+                type="quantitative",
+                range={"min": 0.5, "max": 0.5},
+            )
         ),
         chart_type=ChartType.TABLE,
         task_types=[
@@ -1377,19 +1471,30 @@ def generate():
             .source("<E>", "<E.url>")
             .derive({"<E> Count": "count()"})
             .filter("d['<F>'] != null")
-            .rollup({
-                "Valid <F> Count": Op.count(),
-                "<E> Count": Op.median("<E> Count")
-            })
-            .derive({
-                "Null <F> Count": "d['<E> Count'] - d['Valid <F> Count']",
-                "Null <F> %": "1 - d['Valid <F> Count'] / d['<E> Count']"
-            })
+            .rollup(
+                {"Valid <F> Count": Op.count(), "<E> Count": Op.median("<E> Count")}
+            )
+            .derive(
+                {
+                    "Null <F> Count": "d['<E> Count'] - d['Valid <F> Count']",
+                    "Null <F> %": "1 - d['Valid <F> Count'] / d['<E> Count']",
+                }
+            )
             .mark("row")
-            .text(field="Null <F> Count", mark='text', type='nominal')
-            .text(field="<E> Count", mark='text', type='nominal')
-            .x(field="Null <F> %", mark='bar', type='quantitative', domain={"min": 0, "max": 1})
-            .y(field="Null <F> %", mark='line', type='quantitative', range={"min": 0.5, "max": 0.5})
+            .text(field="Null <F> Count", mark="text", type="nominal")
+            .text(field="<E> Count", mark="text", type="nominal")
+            .x(
+                field="Null <F> %",
+                mark="bar",
+                type="quantitative",
+                domain={"min": 0, "max": 1},
+            )
+            .y(
+                field="Null <F> %",
+                mark="line",
+                type="quantitative",
+                range={"min": 0.5, "max": 0.5},
+            )
         ),
         chart_type=ChartType.TABLE,
         task_types=[
@@ -1405,37 +1510,18 @@ def generate():
 
 
 if __name__ == "__main__":
-    import argparse
     import os
-    from pathlib import Path
 
-    # Default output path: src/skills/template_visualizations.json relative to repo root
-    _repo_root = Path(__file__).resolve().parent.parent
-    _default_output = _repo_root / "src" / "skills" / "template_visualizations.json"
-
-    parser = argparse.ArgumentParser(
-        description="Generate template visualization specs for the UDI skill pipeline."
-    )
-    parser.add_argument(
-        "-o", "--output",
-        type=str,
-        default=str(_default_output),
-        help="Output JSON file path (default: src/skills/template_visualizations.json)",
-    )
-    args = parser.parse_args()
-
-    output_path = Path(args.output)
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-
+    os.makedirs("./out", exist_ok=True)
     df = generate()
 
     # Serialize task_types enum values to strings
-    df['task_types'] = df['task_types'].apply(lambda x: [t.value for t in x])
+    df["task_types"] = df["task_types"].apply(lambda x: [t.value for t in x])
 
     print(f"Generated {len(df)} unique visualization templates.")
     print(f"\nColumns: {list(df.columns)}")
     print(f"\nChart types: {df['chart_type'].value_counts().to_dict()}")
     print(f"Complexity: {df['chart_complexity'].value_counts().to_dict()}")
 
-    df.to_json(str(output_path), orient='records', indent=2)
-    print(f"\nExported to {output_path}")
+    df.to_json("./out/template_visualizations.json", orient="records", indent=2)
+    print(f"\nExported to ./out/template_visualizations.json")
