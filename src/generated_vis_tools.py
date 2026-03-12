@@ -1,8 +1,8 @@
 """
 Auto-generated visualization tool definitions.
 
-Generated from: /Users/devlan/Repos/UDIAgent/src/skills/template_visualizations.json
-Schema: /Users/devlan/Repos/UDIAgent/data/data_domains/hubmap_data_schema.json
+Generated from: src/skills/template_visualizations.json
+Schema: data/data_domains/hubmap_data_schema.json
 Tools: 52
 
 DO NOT EDIT — regenerate with: python src/generate_tools.py
