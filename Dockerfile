@@ -21,8 +21,10 @@ RUN mkdir -p /app/logs && \
     adduser --system --ingroup app app && \
     chown -R app:app /app
 
+ENV UV_CACHE_DIR=/tmp/uv-cache
+
 USER app
 
-EXPOSE 8007
+EXPOSE 80
 
-CMD ["uv", "run", "fastapi", "run", "./src/udi_api.py", "--port", "8007", "--host", "0.0.0.0"]
+CMD ["uv", "run", "fastapi", "run", "./src/udi_api.py", "--port", "80", "--host", "0.0.0.0"]

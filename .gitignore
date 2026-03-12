@@ -153,7 +153,4 @@ data_collection/old*
 data_collection/data_untill_1112
 data_collection/data_tmp
 
-
-uv.lock
-
 .DS_Store
