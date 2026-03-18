@@ -1509,6 +1509,31 @@ def generate():
     return df
 
 
+def add_domain_when_filtered(spec_json):
+    """Inject domainWhenFiltered='filtered' into density y-axis encodings.
+
+    The udi-grammar-py library doesn't support arbitrary encoding properties,
+    so we patch the serialized spec for KDE charts where the density axis
+    should rescale when data is filtered.
+    """
+    import json
+
+    spec = json.loads(spec_json)
+    has_kde = any("kde" in t for t in spec.get("transformation", []))
+    if not has_kde:
+        return spec_json
+
+    for layer in spec.get("representation", []) if isinstance(spec.get("representation"), list) else [spec.get("representation", {})]:
+        mapping = layer.get("mapping", [])
+        if isinstance(mapping, dict):
+            mapping = [mapping]
+        for enc in mapping:
+            if enc.get("encoding") == "y" and enc.get("field") == "density":
+                enc["domainWhenFiltered"] = "filtered"
+
+    return json.dumps(spec)
+
+
 if __name__ == "__main__":
     import os
 
@@ -1518,10 +1543,13 @@ if __name__ == "__main__":
     # Serialize task_types enum values to strings
     df["task_types"] = df["task_types"].apply(lambda x: [t.value for t in x])
 
+    # Inject domainWhenFiltered for KDE density axes
+    df["spec_template"] = df["spec_template"].apply(add_domain_when_filtered)
+
     print(f"Generated {len(df)} unique visualization templates.")
     print(f"\nColumns: {list(df.columns)}")
     print(f"\nChart types: {df['chart_type'].value_counts().to_dict()}")
     print(f"Complexity: {df['chart_complexity'].value_counts().to_dict()}")
 
     df.to_json("./src/skills/template_visualizations.json", orient="records", indent=2)
-    print(f"\nExported to ./src/skill/template_visualizations.json")
+    print(f"\nExported to ./src/skills/template_visualizations.json")
