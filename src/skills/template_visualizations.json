@@ -782,7 +782,7 @@
     "creation_method":"template",
     "chart_type":"area",
     "chart_complexity":"medium",
-    "spec_key_count":13,
+    "spec_key_count":14,
     "task_types":[
       "Characterize_Distribution"
     ],
@@ -814,7 +814,7 @@
     "creation_method":"template",
     "chart_type":"grouped_area",
     "chart_complexity":"complex",
-    "spec_key_count":29,
+    "spec_key_count":31,
     "task_types":[
       "Characterize_Distribution"
     ],

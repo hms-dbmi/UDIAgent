@@ -1320,7 +1320,7 @@ def generate():
             )
             .mark("area")
             .x(field="<F>", type="quantitative")
-            .y(field="density", type="quantitative")
+            .y(field="density", type="quantitative", domainWhenFiltered="filtered")
         ),
         chart_type=ChartType.AREA,
         task_types=[
@@ -1374,12 +1374,12 @@ def generate():
             .mark("area")
             .x(field="<F1>", type="quantitative")
             .color(field="<F2>", type="nominal")
-            .y(field="density", type="quantitative")
+            .y(field="density", type="quantitative", domainWhenFiltered="filtered")
             .opacity(value=0.25)
             .mark("line")
             .x(field="<F1>", type="quantitative")
             .color(field="<F2>", type="nominal")
-            .y(field="density", type="quantitative")
+            .y(field="density", type="quantitative", domainWhenFiltered="filtered")
         ),
         chart_type=ChartType.GROUPED_AREA,
         task_types=[
@@ -1509,31 +1509,6 @@ def generate():
     return df
 
 
-def add_domain_when_filtered(spec_json):
-    """Inject domainWhenFiltered='filtered' into density y-axis encodings.
-
-    The udi-grammar-py library doesn't support arbitrary encoding properties,
-    so we patch the serialized spec for KDE charts where the density axis
-    should rescale when data is filtered.
-    """
-    import json
-
-    spec = json.loads(spec_json)
-    has_kde = any("kde" in t for t in spec.get("transformation", []))
-    if not has_kde:
-        return spec_json
-
-    for layer in spec.get("representation", []) if isinstance(spec.get("representation"), list) else [spec.get("representation", {})]:
-        mapping = layer.get("mapping", [])
-        if isinstance(mapping, dict):
-            mapping = [mapping]
-        for enc in mapping:
-            if enc.get("encoding") == "y" and enc.get("field") == "density":
-                enc["domainWhenFiltered"] = "filtered"
-
-    return json.dumps(spec)
-
-
 if __name__ == "__main__":
     import os
 
@@ -1542,9 +1517,6 @@ if __name__ == "__main__":
 
     # Serialize task_types enum values to strings
     df["task_types"] = df["task_types"].apply(lambda x: [t.value for t in x])
-
-    # Inject domainWhenFiltered for KDE density axes
-    df["spec_template"] = df["spec_template"].apply(add_domain_when_filtered)
 
     print(f"Generated {len(df)} unique visualization templates.")
     print(f"\nColumns: {list(df.columns)}")
