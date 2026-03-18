@@ -562,8 +562,8 @@ TEMPLATES = ['{"source": {"name": "<E>", "source": "<E.url>"}, "transformation":
  '"color", "field": "<F3>", "type": "nominal"}]}}',
  '{"source": {"name": "<E>", "source": "<E.url>"}, "transformation": [{"filter": "d[\'<F>\'] != null"}, {"binby": '
  '{"field": "<F>", "output": {"bin_start": "start", "bin_end": "end"}}}, {"rollup": {"count": {"op": "count"}}}], '
- '"representation": {"mark": "rect", "mapping": [{"encoding": "x", "field": "start", "type": "quantitative"}, '
- '{"encoding": "x2", "field": "end", "type": "quantitative"}, {"encoding": "y", "field": "count", "type": '
+ '"representation": {"mark": "rect", "mapping": [{"encoding": "x", "field": "start", "type": "quantitative", "title": '
+ '"<F>"}, {"encoding": "x2", "field": "end", "type": "quantitative"}, {"encoding": "y", "field": "count", "type": '
  '"quantitative"}]}}',
  '{"source": {"name": "<E>", "source": "<E.url>"}, "transformation": [{"filter": "d[\'<F>\'] != null"}, {"kde": '
  '{"field": "<F>", "output": {"sample": "<F>", "density": "density"}}}], "representation": {"mark": "area", "mapping": '

@@ -1288,7 +1288,7 @@ def generate():
             .binby(field="<F>", output={"bin_start": "start", "bin_end": "end"})
             .rollup({"count": Op.count()})
             .mark("rect")
-            .x(field="start", type="quantitative")
+            .x(field="start", type="quantitative", title="<F>")
             .x2(field="end", type="quantitative")
             .y(field="count", type="quantitative")
         ),

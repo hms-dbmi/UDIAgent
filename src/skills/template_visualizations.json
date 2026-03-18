@@ -762,11 +762,11 @@
       "What is the distribution of <F:q>?",
       "Make a histogram of <F:q>?"
     ],
-    "spec_template":"{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"filter\": \"d['<F>'] != null\"}, {\"binby\": {\"field\": \"<F>\", \"output\": {\"bin_start\": \"start\", \"bin_end\": \"end\"}}}, {\"rollup\": {\"count\": {\"op\": \"count\"}}}], \"representation\": {\"mark\": \"rect\", \"mapping\": [{\"encoding\": \"x\", \"field\": \"start\", \"type\": \"quantitative\"}, {\"encoding\": \"x2\", \"field\": \"end\", \"type\": \"quantitative\"}, {\"encoding\": \"y\", \"field\": \"count\", \"type\": \"quantitative\"}]}}",
+    "spec_template":"{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"filter\": \"d['<F>'] != null\"}, {\"binby\": {\"field\": \"<F>\", \"output\": {\"bin_start\": \"start\", \"bin_end\": \"end\"}}}, {\"rollup\": {\"count\": {\"op\": \"count\"}}}], \"representation\": {\"mark\": \"rect\", \"mapping\": [{\"encoding\": \"x\", \"field\": \"start\", \"type\": \"quantitative\", \"title\": \"<F>\"}, {\"encoding\": \"x2\", \"field\": \"end\", \"type\": \"quantitative\"}, {\"encoding\": \"y\", \"field\": \"count\", \"type\": \"quantitative\"}]}}",
     "creation_method":"template",
     "chart_type":"histogram",
     "chart_complexity":"medium",
-    "spec_key_count":17,
+    "spec_key_count":18,
     "task_types":[
       "Characterize_Distribution"
     ],
