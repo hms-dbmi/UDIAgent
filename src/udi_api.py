@@ -446,15 +446,12 @@ def _handle_rebuff(
             },
         )
         gpt_client = agent._get_gpt_client(openai_api_key)
+        messages = copy.deepcopy(request.messages)
+        strip_tool_calls(messages)
+        messages.insert(0, {"role": "system", "content": rendered})
         resp = gpt_client.chat.completions.create(
             model=agent.gpt_model_name,
-            messages=[
-                {"role": "system", "content": rendered},
-                {
-                    "role": "user",
-                    "content": tool_args.get("user_request", ""),
-                },
-            ],
+            messages=messages,
             temperature=0.0,
             max_completion_tokens=1024,
         )
@@ -510,15 +507,12 @@ def _handle_free_text_explain(
             },
         )
         gpt_client = agent._get_gpt_client(openai_api_key)
+        messages = copy.deepcopy(request.messages)
+        strip_tool_calls(messages)
+        messages.insert(0, {"role": "system", "content": rendered})
         resp = gpt_client.chat.completions.create(
             model=agent.gpt_model_name,
-            messages=[
-                {"role": "system", "content": rendered},
-                {
-                    "role": "user",
-                    "content": tool_args.get("user_request", ""),
-                },
-            ],
+            messages=messages,
             temperature=0.0,
             max_completion_tokens=1024,
         )
@@ -769,6 +763,8 @@ def yac_completions(
     token_payload: dict = Depends(verify_jwt),
     x_openai_key: str | None = Header(None, alias="X-OpenAI-Key"),
 ):
+    logger.info("Received /v1/yac/completions request: %s", request)
+
     split_tool_calls(request)
     tool_calls, orchestrator_choice = orchestrate_tool_calls(
         request, openai_api_key=x_openai_key
