@@ -778,11 +778,11 @@
     "query_templates":[
       "What is the distribution of <F:q>?"
     ],
-    "spec_template":"{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"filter\": \"d['<F>'] != null\"}, {\"kde\": {\"field\": \"<F>\", \"output\": {\"sample\": \"<F>\", \"density\": \"density\"}}}], \"representation\": {\"mark\": \"area\", \"mapping\": [{\"encoding\": \"x\", \"field\": \"<F>\", \"type\": \"quantitative\"}, {\"encoding\": \"y\", \"field\": \"density\", \"type\": \"quantitative\"}]}}",
+    "spec_template":"{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"filter\": \"d['<F>'] != null\"}, {\"kde\": {\"field\": \"<F>\", \"output\": {\"sample\": \"<F>\", \"density\": \"density\"}}}], \"representation\": {\"mark\": \"area\", \"mapping\": [{\"encoding\": \"x\", \"field\": \"<F>\", \"type\": \"quantitative\"}, {\"encoding\": \"y\", \"field\": \"density\", \"type\": \"quantitative\", \"domainWhenFiltered\": \"filtered\"}]}}",
     "creation_method":"template",
     "chart_type":"area",
     "chart_complexity":"medium",
-    "spec_key_count":13,
+    "spec_key_count":14,
     "task_types":[
       "Characterize_Distribution"
     ],
@@ -810,11 +810,11 @@
     "query_templates":[
       "Is the distribution of <F1:q> similar for each <F2:n>?"
     ],
-    "spec_template":"{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"filter\": \"d['<F1>'] != null\"}, {\"groupby\": \"<F2>\"}, {\"kde\": {\"field\": \"<F1>\", \"output\": {\"sample\": \"<F1>\", \"density\": \"density\"}}}], \"representation\": [{\"mark\": \"area\", \"mapping\": [{\"encoding\": \"x\", \"field\": \"<F1>\", \"type\": \"quantitative\"}, {\"encoding\": \"color\", \"field\": \"<F2>\", \"type\": \"nominal\"}, {\"encoding\": \"y\", \"field\": \"density\", \"type\": \"quantitative\"}, {\"encoding\": \"opacity\", \"value\": 0.25}]}, {\"mark\": \"line\", \"mapping\": [{\"encoding\": \"x\", \"field\": \"<F1>\", \"type\": \"quantitative\"}, {\"encoding\": \"color\", \"field\": \"<F2>\", \"type\": \"nominal\"}, {\"encoding\": \"y\", \"field\": \"density\", \"type\": \"quantitative\"}]}]}",
+    "spec_template":"{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"filter\": \"d['<F1>'] != null\"}, {\"groupby\": \"<F2>\"}, {\"kde\": {\"field\": \"<F1>\", \"output\": {\"sample\": \"<F1>\", \"density\": \"density\"}}}], \"representation\": [{\"mark\": \"area\", \"mapping\": [{\"encoding\": \"x\", \"field\": \"<F1>\", \"type\": \"quantitative\"}, {\"encoding\": \"color\", \"field\": \"<F2>\", \"type\": \"nominal\"}, {\"encoding\": \"y\", \"field\": \"density\", \"type\": \"quantitative\", \"domainWhenFiltered\": \"filtered\"}, {\"encoding\": \"opacity\", \"value\": 0.25}]}, {\"mark\": \"line\", \"mapping\": [{\"encoding\": \"x\", \"field\": \"<F1>\", \"type\": \"quantitative\"}, {\"encoding\": \"color\", \"field\": \"<F2>\", \"type\": \"nominal\"}, {\"encoding\": \"y\", \"field\": \"density\", \"type\": \"quantitative\", \"domainWhenFiltered\": \"filtered\"}]}]}",
     "creation_method":"template",
     "chart_type":"grouped_area",
     "chart_complexity":"complex",
-    "spec_key_count":29,
+    "spec_key_count":31,
     "task_types":[
       "Characterize_Distribution"
     ],

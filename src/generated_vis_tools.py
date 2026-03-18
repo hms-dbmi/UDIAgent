@@ -568,16 +568,16 @@ TEMPLATES = ['{"source": {"name": "<E>", "source": "<E.url>"}, "transformation":
  '{"source": {"name": "<E>", "source": "<E.url>"}, "transformation": [{"filter": "d[\'<F>\'] != null"}, {"kde": '
  '{"field": "<F>", "output": {"sample": "<F>", "density": "density"}}}], "representation": {"mark": "area", "mapping": '
  '[{"encoding": "x", "field": "<F>", "type": "quantitative"}, {"encoding": "y", "field": "density", "type": '
- '"quantitative"}]}}',
+ '"quantitative", "domainWhenFiltered": "filtered"}]}}',
  '{"source": {"name": "<E>", "source": "<E.url>"}, "representation": {"mark": "point", "mapping": {"encoding": "x", '
  '"field": "<F>", "type": "quantitative"}}}',
  '{"source": {"name": "<E>", "source": "<E.url>"}, "transformation": [{"filter": "d[\'<F1>\'] != null"}, {"groupby": '
  '"<F2>"}, {"kde": {"field": "<F1>", "output": {"sample": "<F1>", "density": "density"}}}], "representation": '
  '[{"mark": "area", "mapping": [{"encoding": "x", "field": "<F1>", "type": "quantitative"}, {"encoding": "color", '
- '"field": "<F2>", "type": "nominal"}, {"encoding": "y", "field": "density", "type": "quantitative"}, {"encoding": '
- '"opacity", "value": 0.25}]}, {"mark": "line", "mapping": [{"encoding": "x", "field": "<F1>", "type": '
- '"quantitative"}, {"encoding": "color", "field": "<F2>", "type": "nominal"}, {"encoding": "y", "field": "density", '
- '"type": "quantitative"}]}]}',
+ '"field": "<F2>", "type": "nominal"}, {"encoding": "y", "field": "density", "type": "quantitative", '
+ '"domainWhenFiltered": "filtered"}, {"encoding": "opacity", "value": 0.25}]}, {"mark": "line", "mapping": '
+ '[{"encoding": "x", "field": "<F1>", "type": "quantitative"}, {"encoding": "color", "field": "<F2>", "type": '
+ '"nominal"}, {"encoding": "y", "field": "density", "type": "quantitative", "domainWhenFiltered": "filtered"}]}]}',
  '{"source": {"name": "<E>", "source": "<E.url>"}, "representation": {"mark": "point", "mapping": [{"encoding": "x", '
  '"field": "<F1>", "type": "quantitative"}, {"encoding": "y", "field": "<F2>", "type": "nominal"}, {"encoding": '
  '"color", "field": "<F2>", "type": "nominal"}]}}',

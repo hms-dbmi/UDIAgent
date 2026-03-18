@@ -1320,7 +1320,7 @@ def generate():
             )
             .mark("area")
             .x(field="<F>", type="quantitative")
-            .y(field="density", type="quantitative")
+            .y(field="density", type="quantitative", domainWhenFiltered="filtered")
         ),
         chart_type=ChartType.AREA,
         task_types=[
@@ -1374,12 +1374,12 @@ def generate():
             .mark("area")
             .x(field="<F1>", type="quantitative")
             .color(field="<F2>", type="nominal")
-            .y(field="density", type="quantitative")
+            .y(field="density", type="quantitative", domainWhenFiltered="filtered")
             .opacity(value=0.25)
             .mark("line")
             .x(field="<F1>", type="quantitative")
             .color(field="<F2>", type="nominal")
-            .y(field="density", type="quantitative")
+            .y(field="density", type="quantitative", domainWhenFiltered="filtered")
         ),
         chart_type=ChartType.GROUPED_AREA,
         task_types=[
@@ -1524,4 +1524,4 @@ if __name__ == "__main__":
     print(f"Complexity: {df['chart_complexity'].value_counts().to_dict()}")
 
     df.to_json("./src/skills/template_visualizations.json", orient="records", indent=2)
-    print(f"\nExported to ./src/skill/template_visualizations.json")
+    print(f"\nExported to ./src/skills/template_visualizations.json")
