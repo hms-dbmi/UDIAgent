@@ -37,6 +37,7 @@ class UDIAgent:
         self.tokenizer_name = tokenizer_name or model_name
         self.gpt_model_name = gpt_model_name
         self.use_vis_pipeline = use_vis_pipeline
+        self.gpt_model = None  # prevents crash from access; will be lazily initialized if OPENAI_API_KEY is set
         if (vllm_server_port is not None and vllm_server_url is not None) and not use_vis_pipeline:
             self.vllm_server_url = vllm_server_url
             self.vllm_server_port = vllm_server_port
