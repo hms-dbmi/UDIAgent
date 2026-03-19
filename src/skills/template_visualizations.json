@@ -415,11 +415,11 @@
     "query_templates":[
       "Make a pie chart of <F:n>?"
     ],
-    "spec_template":"{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"groupby\": \"<F>\"}, {\"rollup\": {\"proportion\": {\"op\": \"frequency\"}}}], \"representation\": {\"mark\": \"arc\", \"mapping\": [{\"encoding\": \"theta\", \"field\": \"proportion\", \"type\": \"quantitative\"}, {\"encoding\": \"color\", \"field\": \"<F>\", \"type\": \"nominal\"}]}}",
+    "spec_template":"{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"groupby\": \"<F>\"}, {\"rollup\": {\"proportion\": {\"op\": \"frequency\"}}}], \"representation\": {\"mark\": \"arc\", \"mapping\": [{\"encoding\": \"theta\", \"field\": \"proportion\", \"type\": \"quantitative\", \"domainWhenFiltered\": \"filtered\"}, {\"encoding\": \"color\", \"field\": \"<F>\", \"type\": \"nominal\"}]}}",
     "creation_method":"template",
     "chart_type":"circular",
     "chart_complexity":"simple",
-    "spec_key_count":11,
+    "spec_key_count":12,
     "task_types":[
       "Compute_Derived_Value",
       "Determine_Range"
@@ -432,11 +432,11 @@
     "query_templates":[
       "Make a donut chart of <F:n>?"
     ],
-    "spec_template":"{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"groupby\": \"<F>\"}, {\"rollup\": {\"proportion\": {\"op\": \"frequency\"}}}], \"representation\": {\"mark\": \"arc\", \"mapping\": [{\"encoding\": \"theta\", \"field\": \"proportion\", \"type\": \"quantitative\"}, {\"encoding\": \"color\", \"field\": \"<F>\", \"type\": \"nominal\"}, {\"encoding\": \"radius\", \"value\": 60}, {\"encoding\": \"radius2\", \"value\": 80}]}}",
+    "spec_template":"{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"groupby\": \"<F>\"}, {\"rollup\": {\"proportion\": {\"op\": \"frequency\"}}}], \"representation\": {\"mark\": \"arc\", \"mapping\": [{\"encoding\": \"theta\", \"field\": \"proportion\", \"type\": \"quantitative\", \"domainWhenFiltered\": \"filtered\"}, {\"encoding\": \"color\", \"field\": \"<F>\", \"type\": \"nominal\"}, {\"encoding\": \"radius\", \"value\": 60}, {\"encoding\": \"radius2\", \"value\": 80}]}}",
     "creation_method":"template",
     "chart_type":"circular",
     "chart_complexity":"medium",
-    "spec_key_count":15,
+    "spec_key_count":16,
     "task_types":[
       "Compute_Derived_Value",
       "Determine_Range"

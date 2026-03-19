@@ -617,7 +617,9 @@ def generate():
             .groupby("<F>")
             .rollup({"proportion": Op.frequency()})
             .mark("arc")
-            .theta(field="proportion", type="quantitative")
+            .theta(
+                field="proportion", type="quantitative", domainWhenFiltered="filtered"
+            )
             .color(field="<F>", type="nominal")
         ),
         chart_type=ChartType.CIRCULAR,
@@ -642,7 +644,9 @@ def generate():
             .groupby("<F>")
             .rollup({"proportion": Op.frequency()})
             .mark("arc")
-            .theta(field="proportion", type="quantitative")
+            .theta(
+                field="proportion", type="quantitative", domainWhenFiltered="filtered"
+            )
             .color(field="<F>", type="nominal")
             .radius(value=60)
             .radius2(value=80)
