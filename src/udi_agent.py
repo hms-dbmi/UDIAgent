@@ -37,7 +37,7 @@ class UDIAgent:
         self.tokenizer_name = tokenizer_name or model_name
         self.gpt_model_name = gpt_model_name
         self.use_vis_pipeline = use_vis_pipeline
-        self.gpt_model = None  # prevents crash from access; will be lazily initialized if OPENAI_API_KEY is set
+        self.init_server_model_connection()
         if (vllm_server_port is not None and vllm_server_url is not None) and not use_vis_pipeline:
             self.vllm_server_url = vllm_server_url
             self.vllm_server_port = vllm_server_port
@@ -51,16 +51,25 @@ class UDIAgent:
             api_key="EMPTY",
             base_url=base_url,
         )
-
-        env_key = os.getenv("OPENAI_API_KEY")
-        self.gpt_model = OpenAI(api_key=env_key) if env_key else None
-
-        logger.info("Model connections initialized")
+        logger.info("Local Model connections initialized")
 
         # Cache tokenizer + chat template once (avoid reloading per request)
         tokenizer = AutoTokenizer.from_pretrained(self.tokenizer_name)
         self.tokenizer = tokenizer
         self.chat_template = Template(tokenizer.chat_template)
+
+
+    def init_server_model_connection(self):
+        """
+        Handles instantiation for connection to OpenAI for cases where key is baked in to environment.
+        """
+        env_key = os.getenv("OPENAI_API_KEY")
+        if env_key is None:
+            logger.info("No OPENAI_API_KEY found in environment; GPT-based features will require tokens in requests.")
+        else:
+            logger.info("OPENAI_API_KEY found in environment; GPT-based features will use this key by default.")
+        self.gpt_model = OpenAI(api_key=env_key) if env_key else None
+
 
     def _get_gpt_client(self, openai_api_key: str | None = None):
         """Return a per-request OpenAI client if a custom key is provided, otherwise the default."""
