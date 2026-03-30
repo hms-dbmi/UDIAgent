@@ -6,14 +6,14 @@ WORKDIR /app
 
 # Install dependencies first (cached layer)
 COPY pyproject.toml uv.lock ./
-RUN uv sync --frozen --no-install-project
+RUN uv sync --frozen --no-install-project --extra server --extra langfuse
 
 # Copy application code and data
 COPY src/ ./src/
 COPY data/ ./data/
 
 # Install the project itself
-RUN uv sync --frozen
+RUN uv sync --frozen --extra server --extra langfuse
 
 # Create logs directory and non-root user
 RUN mkdir -p /app/logs && \
@@ -27,4 +27,4 @@ USER app
 
 EXPOSE 80
 
-CMD ["uv", "run", "fastapi", "run", "./src/udi_api.py", "--port", "80", "--host", "0.0.0.0"]
+CMD ["uv", "run", "fastapi", "run", "src/udiagent/server/app.py", "--port", "80", "--host", "0.0.0.0"]
