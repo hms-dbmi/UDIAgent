@@ -37,7 +37,7 @@ from udiagent import UDIAgent, Orchestrator
 # Initialize the agent with explicit configuration (no environment variables)
 agent = UDIAgent(
     model_name="HIDIVE/UDI-VIS-Beta-v2-Llama-3.1-8B",
-    gpt_model_name="gpt-4.1",
+    gpt_model_name="gpt-5.4",
     openai_api_key="sk-...",
     vllm_server_url="http://localhost",
     vllm_server_port=55001,
