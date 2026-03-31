@@ -132,36 +132,6 @@ docker build -t udiagent .
 docker run -p 80:80 --env-file .env udiagent
 ```
 
-## Package Structure
-
-```
-src/udiagent/
-  __init__.py               # Public API exports
-  agent.py                  # UDIAgent class (LLM client abstraction)
-  orchestrator.py           # Orchestrator class (request routing + tool dispatch)
-  tools.py                  # ORCHESTRATOR_TOOLS definitions + vis/filter functions
-  messages.py               # Message normalization utilities
-  schema.py                 # Data schema parsing and simplification
-  grammar.py                # Grammar and skill loading (importlib.resources)
-  vis_generate.py           # Skill-based visualization spec generation
-  vis_pipeline.py           # 4-stage modular pipeline (plan/retrieve/generate/validate)
-  structured_functions.py   # Dynamic text function registry
-  generate_tools.py         # Meta-codegen for typed tool definitions
-  _compat.py                # Optional dependency handling (langfuse fallback)
-  data/                     # Bundled package data
-    skills/                 # Markdown skill templates
-    UDIGrammarSchema.json   # Grammar JSON schema
-  server/                   # Optional [server] subpackage
-    app.py                  # FastAPI reference application
-    config.py               # ServerConfig from environment variables
-    auth.py                 # JWT authentication
-    models.py               # Pydantic request/response models
-  benchmark/                # Optional [benchmark] subpackage
-    runner.py               # Benchmark execution harness
-    sample.py               # HuggingFace DQVis dataset sampling
-    convert.py              # JSON to JSONL format conversion
-```
-
 ## Architecture
 
 ### Orchestration Flow
@@ -191,48 +161,6 @@ Stage 4: VALIDATE — JSON schema validation with repair-retry loop
 - **Skills as Markdown** — Prompt templates live in `.md` files with YAML frontmatter
 - **Per-request key override** — Supports both default and per-request OpenAI API keys
 
-## v0.2.0 Refactoring (from v0.1.0)
-
-The package was refactored from a monolithic FastAPI application into a publishable PyPI library with decoupled business logic.
-
-### What Changed
-
-**Business logic decoupled from server code:**
-- The 1099-line `src/udi_api.py` was decomposed into focused modules: `orchestrator.py`, `tools.py`, `messages.py`, and `schema.py`.
-- Tool dispatch handlers (`_handle_create_visualization`, `_handle_rebuff`, `_handle_free_text_explain`, `_handle_clarify_variable`, `_handle_filter_data`) became methods on the `Orchestrator` class.
-- Global state (`agent`, `_skills`, `_pipeline_grammar`, `USE_VIS_PIPELINE`) was eliminated — all state is now explicit on `Orchestrator` and `UDIAgent` instances.
-
-**Environment variables replaced with constructor parameters:**
-- `UDIAgent` now accepts `openai_api_key`, `model_name`, `gpt_model_name`, `vllm_server_url`, `vllm_server_port` as constructor arguments instead of reading `os.getenv()`.
-- `Orchestrator` accepts `use_vis_pipeline` as a constructor argument.
-- Server-specific config (`JWT_SECRET_KEY`, `INSECURE_DEV_MODE`, etc.) is isolated in `ServerConfig.from_env()`.
-
-**Optional dependencies:**
-- `fastapi`, `python-jose` moved to `[server]` extra.
-- `langfuse` moved to `[langfuse]` extra — the library falls back to vanilla `openai.OpenAI` if langfuse is not installed.
-- `datasets`, `huggingface-hub`, `ijson` moved to `[benchmark]` extra.
-
-**Package data bundled:**
-- Skill templates and grammar schemas are bundled with the wheel and loaded via `importlib.resources`.
-- `load_grammar()` and `load_skills()` work out of the box with no file path configuration.
-
-**Duplicated code eliminated:**
-- `load_grammar()` was defined identically in `vis_generate.py` and `vis_pipeline.py` — now unified in `grammar.py`.
-- `simplify_data_domains()` was in `vis_generate.py` but used by `udi_api.py` — now in `schema.py`.
-
-**Server preserved as reference implementation:**
-- `udiagent.server.app` is a thin FastAPI wrapper that instantiates `UDIAgent` + `Orchestrator` from env vars and delegates to the library.
-- Backward-compatibility shims at old `src/` locations allow existing scripts to keep working.
-
-### Migration Guide (for existing deployments)
-
-| Before (v0.1.0) | After (v0.2.0) |
-|---|---|
-| `fastapi run ./src/udi_api.py` | `fastapi run src/udiagent/server/app.py` |
-| `from udi_agent import UDIAgent` | `from udiagent import UDIAgent` |
-| `from vis_generate import generate_vis_spec` | `from udiagent import generate_vis_spec` |
-| `from udi_api import orchestrate_tool_calls` | `from udiagent import Orchestrator` |
-| Environment variables required at import time | Explicit constructor parameters |
 
 ## Regenerating Template Visualizations and Tool Definitions
 
