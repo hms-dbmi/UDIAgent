@@ -3,7 +3,7 @@
 from unittest.mock import patch, MagicMock
 import pytest
 
-from udi_agent import UDIAgent, _make_openai_client
+from udiagent.agent import UDIAgent, _make_openai_client
 
 
 # ---------------------------------------------------------------------------
@@ -54,27 +54,30 @@ class TestGetGptClient:
 
 
 # ---------------------------------------------------------------------------
-# Integration tests for API header extraction
+# Integration tests for API header extraction (new server app)
 # ---------------------------------------------------------------------------
 
 
 class TestApiHeaderExtraction:
     @pytest.fixture(autouse=True)
     def setup_app(self):
-        """Patch UDIAgent to avoid real model initialization, then import the app."""
+        """Patch UDIAgent to avoid real model initialization, then import the server app."""
         with patch.object(UDIAgent, "__init__", lambda self, **kwargs: None):
-            import udi_api
+            import udiagent.server.app as server_app
 
-            # Set required attributes on the agent singleton
-            udi_api.agent = UDIAgent.__new__(UDIAgent)
-            udi_api.agent.gpt_model = MagicMock(name="default_gpt_model")
-            udi_api.agent.gpt_model_name = "gpt-4.1"
-            udi_api.agent.model_name = "test-model"
+            # Set required attributes on the agent
+            mock_agent = UDIAgent.__new__(UDIAgent)
+            mock_agent.gpt_model = MagicMock(name="default_gpt_model")
+            mock_agent.gpt_model_name = "gpt-4.1"
+            mock_agent.model_name = "test-model"
+
+            server_app.agent = mock_agent
+            server_app.orchestrator.agent = mock_agent
 
             from starlette.testclient import TestClient
 
-            self.client = TestClient(udi_api.app)
-            self.udi_api = udi_api
+            self.client = TestClient(server_app.app)
+            self.server_app = server_app
             yield
 
     def _make_request_body(self):
@@ -85,16 +88,16 @@ class TestApiHeaderExtraction:
             "dataDomains": "{}",
         }
 
-    def test_header_passed_to_determine_function_calls(self):
-        """When X-OpenAI-Key is sent, it should reach completions_guided_choice."""
+    def test_header_propagated_to_orchestrator(self):
+        """When X-OpenAI-Key is sent, it should reach the orchestrator.run() call."""
         with patch.object(
-            self.udi_api.agent,
-            "completions_guided_choice",
-            return_value="render-visualization",
-        ) as mock_choice, patch(
-            "udi_api.function_call_render_visualization",
-            return_value={"name": "RenderVisualization", "arguments": {"spec": {}}},
-        ):
+            self.server_app.orchestrator,
+            "run",
+            return_value=MagicMock(
+                tool_calls=[{"name": "RenderVisualization", "arguments": {"spec": {}}}],
+                orchestrator_choice="render-visualization",
+            ),
+        ) as mock_run:
             self.client.post(
                 "/v1/yac/completions",
                 json=self._make_request_body(),
@@ -103,48 +106,23 @@ class TestApiHeaderExtraction:
                     "X-OpenAI-Key": "sk-user-provided",
                 },
             )
-            mock_choice.assert_called_once()
-            assert mock_choice.call_args.kwargs.get("openai_api_key") == "sk-user-provided"
+            mock_run.assert_called_once()
+            assert mock_run.call_args.kwargs.get("openai_api_key") == "sk-user-provided"
 
     def test_no_header_passes_none(self):
         """When X-OpenAI-Key is absent, openai_api_key should be None."""
         with patch.object(
-            self.udi_api.agent,
-            "completions_guided_choice",
-            return_value="render-visualization",
-        ) as mock_choice, patch(
-            "udi_api.function_call_render_visualization",
-            return_value={"name": "RenderVisualization", "arguments": {"spec": {}}},
-        ):
+            self.server_app.orchestrator,
+            "run",
+            return_value=MagicMock(
+                tool_calls=[],
+                orchestrator_choice="render-visualization",
+            ),
+        ) as mock_run:
             self.client.post(
                 "/v1/yac/completions",
                 json=self._make_request_body(),
                 headers={"Authorization": "Bearer test"},
             )
-            mock_choice.assert_called_once()
-            assert mock_choice.call_args.kwargs.get("openai_api_key") is None
-
-    def test_header_passed_to_filter(self):
-        """When both filter and vis are needed, the key reaches gpt_completions_guided_json."""
-        with patch.object(
-            self.udi_api.agent,
-            "completions_guided_choice",
-            return_value="both",
-        ), patch.object(
-            self.udi_api.agent,
-            "gpt_completions_guided_json",
-            return_value=[{"entity": "donors", "field": "age", "filter": {}}],
-        ) as mock_filter, patch(
-            "udi_api.function_call_render_visualization",
-            return_value={"name": "RenderVisualization", "arguments": {"spec": {}}},
-        ):
-            self.client.post(
-                "/v1/yac/completions",
-                json=self._make_request_body(),
-                headers={
-                    "Authorization": "Bearer test",
-                    "X-OpenAI-Key": "sk-user-key",
-                },
-            )
-            mock_filter.assert_called_once()
-            assert mock_filter.call_args.kwargs.get("openai_api_key") == "sk-user-key"
+            mock_run.assert_called_once()
+            assert mock_run.call_args.kwargs.get("openai_api_key") is None

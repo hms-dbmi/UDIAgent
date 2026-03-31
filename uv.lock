@@ -1991,25 +1991,45 @@ wheels = [
 
 [[package]]
 name = "udiagent"
-version = "0.1.0"
-source = { virtual = "." }
+version = "0.2.0"
+source = { editable = "." }
 dependencies = [
-    { name = "datasets" },
-    { name = "fastapi", extra = ["standard"] },
-    { name = "huggingface-hub" },
-    { name = "ijson" },
+    { name = "jinja2" },
     { name = "jsonschema" },
-    { name = "langfuse" },
     { name = "openai" },
-    { name = "python-jose" },
+    { name = "python-dotenv" },
     { name = "requests" },
     { name = "transformers" },
 ]
 
 [package.optional-dependencies]
+all = [
+    { name = "datasets" },
+    { name = "fastapi", extra = ["standard"] },
+    { name = "huggingface-hub" },
+    { name = "ijson" },
+    { name = "langfuse" },
+    { name = "pandas" },
+    { name = "python-dotenv" },
+    { name = "python-jose" },
+    { name = "udi-grammar-py" },
+]
+benchmark = [
+    { name = "datasets" },
+    { name = "huggingface-hub" },
+    { name = "ijson" },
+]
 codegen = [
     { name = "pandas" },
     { name = "udi-grammar-py" },
+]
+langfuse = [
+    { name = "langfuse" },
+]
+server = [
+    { name = "fastapi", extra = ["standard"] },
+    { name = "python-dotenv" },
+    { name = "python-jose" },
 ]
 test = [
     { name = "pytest" },
@@ -2017,21 +2037,25 @@ test = [
 
 [package.metadata]
 requires-dist = [
-    { name = "datasets", specifier = ">=4.5.0" },
-    { name = "fastapi", extras = ["standard"], specifier = ">=0.128.0" },
-    { name = "huggingface-hub", specifier = ">=0.36.0" },
-    { name = "ijson", specifier = ">=3.4.0.post0" },
+    { name = "datasets", marker = "extra == 'benchmark'", specifier = ">=4.5.0" },
+    { name = "fastapi", extras = ["standard"], marker = "extra == 'server'", specifier = ">=0.128.0" },
+    { name = "huggingface-hub", marker = "extra == 'benchmark'", specifier = ">=0.36.0" },
+    { name = "ijson", marker = "extra == 'benchmark'", specifier = ">=3.4.0.post0" },
+    { name = "jinja2", specifier = ">=3.1.0" },
     { name = "jsonschema", specifier = ">=4.26.0" },
-    { name = "langfuse", specifier = ">=3.14.3" },
+    { name = "langfuse", marker = "extra == 'langfuse'", specifier = ">=3.14.3" },
     { name = "openai", specifier = ">=2.15.0" },
     { name = "pandas", marker = "extra == 'codegen'", specifier = ">=2.0.0" },
     { name = "pytest", marker = "extra == 'test'", specifier = ">=8.0.0" },
-    { name = "python-jose", specifier = ">=3.5.0" },
+    { name = "python-dotenv", specifier = ">=1.0.0" },
+    { name = "python-dotenv", marker = "extra == 'server'", specifier = ">=1.0.0" },
+    { name = "python-jose", marker = "extra == 'server'", specifier = ">=3.5.0" },
     { name = "requests", specifier = ">=2.32.5" },
     { name = "transformers", specifier = ">=4.57.5" },
     { name = "udi-grammar-py", marker = "extra == 'codegen'" },
+    { name = "udiagent", extras = ["langfuse", "server", "benchmark", "codegen"], marker = "extra == 'all'" },
 ]
-provides-extras = ["test", "codegen"]
+provides-extras = ["langfuse", "server", "benchmark", "codegen", "test", "all"]
 
 [[package]]
 name = "urllib3"

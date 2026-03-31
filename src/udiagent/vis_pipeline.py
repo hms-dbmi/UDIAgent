@@ -14,6 +14,8 @@ from pathlib import Path
 
 import jsonschema
 
+from udiagent.grammar import load_grammar
+
 # ---------------------------------------------------------------------------
 # Default config
 # ---------------------------------------------------------------------------
@@ -81,35 +83,6 @@ PLAN_SCHEMA = {
 }
 
 # ---------------------------------------------------------------------------
-# Grammar loading
-# ---------------------------------------------------------------------------
-
-
-def load_grammar(grammar_name, base_path="./src"):
-    """Load a grammar definition by name.
-
-    Returns {"schema_dict": ..., "schema_string": ..., "system_prompt": ...}
-    """
-    base = Path(base_path)
-    if grammar_name == "udi":
-        with open(base / "UDIGrammarSchema.json") as f:
-            schema_dict = json.load(f)
-        with open(base / "UDIGrammarSchema_spec_string.json") as f:
-            schema_string = f.read()
-        system_prompt = (
-            "You are a helpful assistant that creates data visualizations using "
-            "the UDI Grammar specification. Generate a valid UDI Grammar JSON spec "
-            "based on the user's request and the provided data schema."
-        )
-        return {
-            "schema_dict": schema_dict,
-            "schema_string": schema_string,
-            "system_prompt": system_prompt,
-        }
-    else:
-        raise ValueError(f"Unknown grammar: {grammar_name}")
-
-# ---------------------------------------------------------------------------
 # Example spec loading
 # ---------------------------------------------------------------------------
 
@@ -145,10 +118,7 @@ def load_example_specs(path, embed_fn=None):
 
 
 def stage_plan(agent, messages, data_schema, data_domains, config):
-    """Produce a structured plan dict (mark type, fields, tasks, etc.).
-
-    Returns plan dict or None if skipped.
-    """
+    """Produce a structured plan dict (mark type, fields, tasks, etc.)."""
     backend = config.get("backend", "skip")
     if backend == "skip":
         return None
@@ -204,10 +174,8 @@ def _tag_score(example, plan):
         return 0.0
     score = 0.0
     tags = example.get("tags", {})
-    # mark type match
     if plan.get("mark_type") in tags.get("mark_types", []):
         score += 0.15
-    # data task overlap
     plan_tasks = set(plan.get("data_tasks", []))
     example_tasks = set(tags.get("data_tasks", []))
     overlap = plan_tasks & example_tasks
@@ -216,13 +184,7 @@ def _tag_score(example, plan):
 
 
 def stage_retrieve(query_text, plan, example_store, embed_fn, config):
-    """Retrieve top-k relevant example specs.
-
-    Uses embedding similarity + tag boost when embed_fn is available,
-    falls back to pure tag matching otherwise.
-
-    Returns list of example dicts.
-    """
+    """Retrieve top-k relevant example specs."""
     if example_store is None or not example_store.get("examples"):
         return []
 
@@ -235,19 +197,16 @@ def stage_retrieve(query_text, plan, example_store, embed_fn, config):
     scored = []
 
     if backend == "embedding" and embed_fn is not None and embeddings is not None:
-        # Embed the query
         query_embedding = embed_fn([query_text])[0]
         for i, ex in enumerate(examples):
             sim = _cosine_similarity(query_embedding, embeddings[i])
             tag_boost = _tag_score(ex, plan) if use_tag_boost else 0.0
             scored.append((sim + tag_boost, ex))
     else:
-        # tags-only fallback
         for ex in examples:
             tag_boost = _tag_score(ex, plan)
             scored.append((tag_boost, ex))
 
-    # Sort descending by score
     scored.sort(key=lambda x: x[0], reverse=True)
     return [ex for _, ex in scored[:top_k]]
 
@@ -288,16 +247,12 @@ def _build_generate_messages(messages, data_schema, grammar, plan, examples):
     system_content = "\n\n".join(system_parts)
 
     gen_messages = [{"role": "system", "content": system_content}]
-    # Append the conversation messages
     gen_messages.extend(messages)
     return gen_messages
 
 
 def stage_generate(agent, messages, data_schema, grammar, plan, examples, config):
-    """Generate a visualization spec string.
-
-    Returns raw spec string (JSON).
-    """
+    """Generate a visualization spec string."""
     gen_messages = _build_generate_messages(messages, data_schema, grammar, plan, examples)
     backend = config.get("backend", "vllm")
     n = config.get("n", 1)
@@ -308,11 +263,8 @@ def stage_generate(agent, messages, data_schema, grammar, plan, examples, config
             json_schema=grammar["schema_string"],
             n=n,
         )
-        # GPT returns parsed dicts; the wrapper schema has name/arguments/spec
-        # We need to extract the spec from the response
         if results:
             result = results[0]
-            # The schema_string wraps as RenderVisualizationWrapper
             if "arguments" in result and "spec" in result["arguments"]:
                 return result["arguments"]["spec"]
             return json.dumps(result)
@@ -349,10 +301,7 @@ def stage_generate(agent, messages, data_schema, grammar, plan, examples, config
 
 
 def _validate_json_schema(spec_dict, grammar):
-    """Validate spec_dict against the grammar's JSON schema.
-
-    Returns list of error strings (empty if valid).
-    """
+    """Validate spec_dict against the grammar's JSON schema."""
     schema = grammar["schema_dict"]
     errors = []
     try:
@@ -381,15 +330,11 @@ def _build_repair_messages(messages, data_schema, grammar, plan, examples,
 
 def stage_validate(agent, spec_str, messages, data_schema, grammar, plan, examples,
                    config, generate_config):
-    """Validate the spec and attempt repair if invalid.
-
-    Returns (spec_dict, valid, errors).
-    """
+    """Validate the spec and attempt repair if invalid."""
     max_retries = config.get("max_retries", 3)
     validators = config.get("validators", ["json_schema"])
 
     for attempt in range(max_retries + 1):
-        # Parse JSON
         try:
             spec_dict = json.loads(spec_str) if isinstance(spec_str, str) else spec_str
         except json.JSONDecodeError as e:
@@ -402,7 +347,6 @@ def stage_validate(agent, spec_str, messages, data_schema, grammar, plan, exampl
                 continue
             return spec_str, False, errors
 
-        # Run validators
         all_errors = []
         if "json_schema" in validators:
             all_errors.extend(_validate_json_schema(spec_dict, grammar))
@@ -410,7 +354,6 @@ def stage_validate(agent, spec_str, messages, data_schema, grammar, plan, exampl
         if not all_errors:
             return spec_dict, True, []
 
-        # Retry via repair
         if attempt < max_retries:
             spec_str = _repair(
                 agent, spec_str if isinstance(spec_str, str) else json.dumps(spec_dict),
@@ -420,7 +363,6 @@ def stage_validate(agent, spec_str, messages, data_schema, grammar, plan, exampl
         else:
             return spec_dict, False, all_errors
 
-    # Should not reach here, but just in case
     return spec_str, False, ["Max retries exceeded"]
 
 
@@ -496,7 +438,6 @@ def run_vis_pipeline(agent, messages, data_schema, data_domains, grammar,
     plan = stage_plan(agent, messages, data_schema, data_domains, config["plan"])
 
     # Stage 2: Retrieve examples
-    # Extract query text from the last user message
     query_text = ""
     for msg in reversed(messages):
         if msg.get("role") == "user":
