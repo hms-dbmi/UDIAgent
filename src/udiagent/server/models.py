@@ -15,14 +15,12 @@ class CompletionRequest(BaseModel):
 
 
 class YACCompletionRequest(BaseModel):
-    model: str
     messages: list[dict]
     dataSchema: str
     dataDomains: str
 
 
 class YACBenchmarkCompletionRequest(BaseModel):
-    model: str
     messages: list[dict]
     dataSchema: str
     dataDomains: str
