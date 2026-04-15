@@ -34,10 +34,14 @@ class UDIAgent:
         Uses the explicitly provided *openai_api_key* if given.
         """
         if openai_api_key is None:
-            logger.info("No OpenAI API key provided; GPT-based features will require per-request keys.")
+            logger.info(
+                "No OpenAI API key provided; GPT-based features will require per-request keys."
+            )
             self.gpt_model = None
         else:
-            logger.info("OpenAI API key provided; GPT-based features will use this key by default.")
+            logger.info(
+                "OpenAI API key provided; GPT-based features will use this key by default."
+            )
             self.gpt_model = _OpenAI(api_key=openai_api_key)
 
     def _get_gpt_client(self, openai_api_key: str | None = None):
@@ -50,38 +54,6 @@ class UDIAgent:
                 "or pass a per-request key."
             )
         return self.gpt_model
-
-    def completions_guided_choice(
-        self,
-        messages: list[dict],
-        tools: list[dict],
-        choices: list[str],
-        openai_api_key: str | None = None,
-    ):
-        schema = {
-            "name": "ChoiceSelection",
-            "schema": {
-                "type": "object",
-                "additionalProperties": False,
-                "properties": {"choice": {"type": "string", "enum": choices}},
-                "required": ["choice"],
-            },
-            "strict": True,
-        }
-
-        client = self._get_gpt_client(openai_api_key)
-        resp = client.chat.completions.create(
-            model=self.gpt_model_name,
-            messages=messages,
-            response_format={
-                "type": "json_schema",
-                "json_schema": schema,
-            },
-            max_completion_tokens=10,
-            temperature=0.0,
-        )
-        content = resp.choices[0].message.content
-        return json.loads(content)["choice"]
 
     def gpt_completions_guided_json(
         self,

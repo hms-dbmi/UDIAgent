@@ -28,6 +28,7 @@ class OrchestratorResult:
     """Result of an orchestration run."""
 
     tool_calls: list[dict] = field(default_factory=list)
+    orchestrator_choice: str = "render-visualization"
 
 
 class Orchestrator:
@@ -72,16 +73,16 @@ class Orchestrator:
             openai_api_key: Optional per-request OpenAI key override.
 
         Returns:
-            An ``OrchestratorResult`` with tool_calls.
+            An ``OrchestratorResult`` with tool_calls and orchestrator_choice.
         """
         msgs = split_tool_calls(messages)
-        tool_calls = self._orchestrate_tool_calls(
+        tool_calls, choice = self._orchestrate_tool_calls(
             msgs,
             data_schema,
             data_domains,
             openai_api_key=openai_api_key,
         )
-        return OrchestratorResult(tool_calls=tool_calls)
+        return OrchestratorResult(tool_calls=tool_calls, orchestrator_choice=choice)
 
     # ------------------------------------------------------------------
     # Tool dispatch handlers
@@ -350,6 +351,11 @@ class Orchestrator:
         }
 
         tool_calls = []
+        has_vis = False
+        has_filter = False
+        has_rebuff = False
+        has_clarify = False
+        has_explain = False
 
         for tc in choice.message.tool_calls:
             tool_name = tc.function.name
@@ -369,4 +375,29 @@ class Orchestrator:
             )
             tool_calls.append(result)
 
-        return tool_calls
+            if tool_name == "CreateVisualization":
+                has_vis = True
+            elif tool_name == "FilterData":
+                has_filter = True
+            elif tool_name == "Rebuff":
+                has_rebuff = True
+            elif tool_name == "ClarifyVariable":
+                has_clarify = True
+            elif tool_name == "FreeTextExplain":
+                has_explain = True
+
+        # Derive orchestrator_choice for backward compatibility
+        if has_explain:
+            orchestrator_choice = "explain"
+        elif has_clarify:
+            orchestrator_choice = "clarify-variable"
+        elif has_rebuff:
+            orchestrator_choice = "rebuff"
+        elif has_vis and has_filter:
+            orchestrator_choice = "both"
+        elif has_filter:
+            orchestrator_choice = "get-subset-of-data"
+        else:
+            orchestrator_choice = "render-visualization"
+
+        return tool_calls, orchestrator_choice

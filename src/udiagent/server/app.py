@@ -114,6 +114,7 @@ def yac_completions(
         data_domains=request.dataDomains,
         openai_api_key=x_openai_key,
     )
+    logger.info("orchestrator_choice: %s", result.orchestrator_choice)
     logger.info("tool_calls: %s", result.tool_calls)
     return result.tool_calls
 
@@ -124,16 +125,14 @@ def yac_benchmark(
     token_payload: dict = Depends(verify_jwt),
     x_openai_key: str | None = Header(None, alias="X-OpenAI-Key"),
 ):
-    # New path: tool-calling orchestration
     result = orchestrator.run(
         messages=request.messages,
         data_schema=request.dataSchema,
         data_domains=request.dataDomains,
         openai_api_key=x_openai_key,
     )
-    tool_calls = result.tool_calls
 
-    return {"tool_calls": tool_calls}
+    return {"tool_calls": result.tool_calls, "orchestrator_choice": result.orchestrator_choice}
 
 
 @app.get("/v1/yac/examples")
