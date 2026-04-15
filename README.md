@@ -2,7 +2,7 @@
 
 LLM-powered data visualization orchestration library for the Universal Discovery Interface (UDI).
 
-UDIAgent orchestrates GPT-4 and a fine-tuned Llama model to generate data visualization specs from natural language queries. It can be used as a **standalone Python library** or deployed as a **FastAPI microservice**.
+UDIAgent orchestrates LLM calls to generate data visualization specs from natural language queries. It can be used as a **standalone Python library** or deployed as a **FastAPI microservice**.
 
 ## Installation
 
@@ -56,22 +56,22 @@ result = orch.run(
 
 ### Key Classes
 
-| Class | Description |
-|---|---|
-| `UDIAgent` | OpenAI client wrapper |
-| `Orchestrator` | Routes user requests to visualization, filter, explanation, and clarification handlers |
-| `OrchestratorResult` | Dataclass with `tool_calls` and `orchestrator_choice` |
+| Class                | Description                                                                            |
+| -------------------- | -------------------------------------------------------------------------------------- |
+| `UDIAgent`           | OpenAI client wrapper                                                                  |
+| `Orchestrator`       | Routes user requests to visualization, filter, explanation, and clarification handlers |
+| `OrchestratorResult` | Dataclass with `tool_calls` and `orchestrator_choice`                                  |
 
 ### Utility Functions
 
-| Function | Description |
-|---|---|
-| `load_grammar()` | Load the UDI Grammar JSON schema (bundled with the package) |
-| `load_skills()` | Load skill prompt templates (bundled with the package) |
-| `render_template()` | Substitute `{{key}}` placeholders in a skill instruction template |
-| `generate_vis_spec()` | Generate a visualization spec using the skills pipeline |
-| `simplify_data_domains()` | Simplify data domains JSON into compact LLM-friendly text |
-| `parse_schema_from_dict()` | Parse a data schema dict into structured format |
+| Function                   | Description                                                       |
+| -------------------------- | ----------------------------------------------------------------- |
+| `load_grammar()`           | Load the UDI Grammar JSON schema (bundled with the package)       |
+| `load_skills()`            | Load skill prompt templates (bundled with the package)            |
+| `render_template()`        | Substitute `{{key}}` placeholders in a skill instruction template |
+| `generate_vis_spec()`      | Generate a visualization spec using the skills pipeline           |
+| `simplify_data_domains()`  | Simplify data domains JSON into compact LLM-friendly text         |
+| `parse_schema_from_dict()` | Parse a data schema dict into structured format                   |
 
 ## Server Usage
 
@@ -89,27 +89,27 @@ uv run fastapi run src/udiagent/server/app.py --port 8007
 
 ### Server Environment Variables
 
-| Variable | Required | Default | Description |
-|---|---|---|---|
-| `OPENAI_API_KEY` | No | — | OpenAI API key. If not set, must be provided per-request via `X-OpenAI-Key` header. |
-| `GPT_MODEL_NAME` | No | `gpt-5.4` | OpenAI model for orchestration |
-| `JWT_SECRET_KEY` | Yes* | — | JWT signing key (*not required if `INSECURE_DEV_MODE=1`) |
-| `JWT_ALGORITHM` | No | `HS256` | JWT algorithm |
-| `INSECURE_DEV_MODE` | No | `0` | Set to `1` to skip JWT verification (development only) |
-| `LANGFUSE_SECRET_KEY` | No | — | LangFuse observability secret key |
-| `LANGFUSE_PUBLIC_KEY` | No | — | LangFuse observability public key |
-| `LANGFUSE_BASE_URL` | No | — | LangFuse instance URL |
+| Variable              | Required | Default   | Description                                                                         |
+| --------------------- | -------- | --------- | ----------------------------------------------------------------------------------- |
+| `OPENAI_API_KEY`      | No       | —         | OpenAI API key. If not set, must be provided per-request via `X-OpenAI-Key` header. |
+| `GPT_MODEL_NAME`      | No       | `gpt-5.4` | OpenAI model for orchestration                                                      |
+| `JWT_SECRET_KEY`      | Yes\*    | —         | JWT signing key (\*not required if `INSECURE_DEV_MODE=1`)                           |
+| `JWT_ALGORITHM`       | No       | `HS256`   | JWT algorithm                                                                       |
+| `INSECURE_DEV_MODE`   | No       | `0`       | Set to `1` to skip JWT verification (development only)                              |
+| `LANGFUSE_SECRET_KEY` | No       | —         | LangFuse observability secret key                                                   |
+| `LANGFUSE_PUBLIC_KEY` | No       | —         | LangFuse observability public key                                                   |
+| `LANGFUSE_BASE_URL`   | No       | —         | LangFuse instance URL                                                               |
 
 ### Server Endpoints
 
-| Endpoint | Method | Description |
-|---|---|---|
-| `/` | GET | API status and info |
-| `/v1/yac/completions` | POST | Main orchestrator — routes user requests to tools |
-| `/v1/yac/benchmark` | POST | Benchmark variant with optional orchestrator override |
-| `/v1/yac/examples` | GET | Example prompts from `data/example_prompts.json` |
-| `/v1/yac/structured_functions` | GET | Structured function registry |
-| `/v1/yac/benchmark_analysis` | GET | Latest benchmark analysis results |
+| Endpoint                       | Method | Description                                           |
+| ------------------------------ | ------ | ----------------------------------------------------- |
+| `/`                            | GET    | API status and info                                   |
+| `/v1/yac/completions`          | POST   | Main orchestrator — routes user requests to tools     |
+| `/v1/yac/benchmark`            | POST   | Benchmark variant with optional orchestrator override |
+| `/v1/yac/examples`             | GET    | Example prompts from `data/example_prompts.json`      |
+| `/v1/yac/structured_functions` | GET    | Structured function registry                          |
+| `/v1/yac/benchmark_analysis`   | GET    | Latest benchmark analysis results                     |
 
 ### Docker
 
@@ -146,10 +146,10 @@ Skills live in `src/udiagent/data/skills/*.md` (YAML frontmatter + prompt body).
 - **Skills as Markdown** — Prompt templates live in `.md` files with YAML frontmatter
 - **Per-request key override** — Supports both default and per-request OpenAI API keys
 
-
 ## Regenerating Template Visualizations and Tool Definitions
 
 The vis pipeline uses two generated artifacts:
+
 - `src/udiagent/data/skills/template_visualizations.json` — template visualization specs
 - `src/udiagent/generated_vis_tools.py` — typed OpenAI function-calling tool definitions
 
