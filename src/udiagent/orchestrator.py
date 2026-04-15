@@ -16,7 +16,6 @@ from udiagent.structured_functions import (
 )
 from udiagent.tools import (
     ORCHESTRATOR_TOOLS,
-    function_call_filter,
     function_call_render_visualization,
 )
 
@@ -262,11 +261,11 @@ class Orchestrator:
         field_meta = {}
         for resource in schema_raw.get("resources", []):
             entity_name = resource.get("name", "")
-            for field in resource.get("schema", {}).get("fields", []):
-                fname = field.get("name", "")
+            for field_def in resource.get("schema", {}).get("fields", []):
+                fname = field_def.get("name", "")
                 field_meta[(entity_name, fname)] = {
-                    "data_type": field.get("udi:data_type", "unknown"),
-                    "description": field.get("description", "").strip(),
+                    "data_type": field_def.get("udi:data_type", "unknown"),
+                    "description": field_def.get("description", "").strip(),
                 }
 
         ambiguous_variables = tool_args.get("ambiguous_variables", [])
