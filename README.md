@@ -73,7 +73,6 @@ result = orch.run(
 | `load_skills()` | Load skill prompt templates (bundled with the package) |
 | `render_template()` | Substitute `{{key}}` placeholders in a skill instruction template |
 | `generate_vis_spec()` | Generate a visualization spec using the skills pipeline |
-| `run_vis_pipeline()` | Run the 4-stage modular pipeline (plan/retrieve/generate/validate) |
 | `simplify_data_domains()` | Simplify data domains JSON into compact LLM-friendly text |
 | `parse_schema_from_dict()` | Parse a data schema dict into structured format |
 
@@ -146,14 +145,14 @@ User query
     → Return OrchestratorResult(tool_calls, orchestrator_choice)
 ```
 
-### Visualization Pipeline (when `use_vis_pipeline=True`)
+### Visualization Generation (when `use_vis_pipeline=True`)
 
-```
-Stage 1: PLAN     — GPT identifies mark type, fields, data tasks
-Stage 2: RETRIEVE — Few-shot example retrieval via embedding RAG + tag boost
-Stage 3: GENERATE — Full UDI Grammar spec generation (GPT or vLLM)
-Stage 4: VALIDATE — JSON schema validation with repair-retry loop
-```
+Executes a two-step markdown skill plan via `generate_vis_spec` (`vis_generate.py`):
+
+1. **generate** — LLM produces a UDI Grammar spec from the request, schema, and few-shot examples
+2. **validate** — JSON schema check with a bounded repair-retry loop
+
+Skills live in `src/udiagent/data/skills/*.md` (YAML frontmatter + prompt body). When the flag is false, the orchestrator falls back to a single-shot vLLM guided-JSON call (`function_call_render_visualization_legacy`).
 
 ### Design Principles
 

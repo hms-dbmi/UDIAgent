@@ -5,7 +5,6 @@ from udiagent.orchestrator import Orchestrator, OrchestratorResult
 from udiagent.skills import Skill, load_skills, render_template
 from udiagent.grammar import load_grammar
 from udiagent.vis_generate import generate_vis_spec
-from udiagent.vis_pipeline import run_vis_pipeline
 from udiagent.schema import parse_schema_from_dict, simplify_data_domains, simplify_data_schema
 from udiagent.messages import split_tool_calls, normalize_tool_calls, strip_tool_calls
 from udiagent.structured_functions import (
@@ -24,7 +23,6 @@ __all__ = [
     "load_grammar",
     "load_skills",
     "generate_vis_spec",
-    "run_vis_pipeline",
     "parse_schema_from_dict",
     "simplify_data_domains",
     "simplify_data_schema",
