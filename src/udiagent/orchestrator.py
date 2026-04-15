@@ -17,8 +17,7 @@ from udiagent.structured_functions import (
 from udiagent.tools import (
     ORCHESTRATOR_TOOLS,
     function_call_filter,
-    function_call_render_visualization_legacy,
-    function_call_render_visualization_pipeline,
+    function_call_render_visualization,
 )
 
 logger = logging.getLogger(__name__)
@@ -29,7 +28,6 @@ class OrchestratorResult:
     """Result of an orchestration run."""
 
     tool_calls: list[dict] = field(default_factory=list)
-    orchestrator_choice: str = "render-visualization"
 
 
 class Orchestrator:
@@ -39,8 +37,7 @@ class Orchestrator:
         agent: A ``UDIAgent`` instance.
         skills: Skill registry.  Loaded from bundled data if ``None``.
         tools: Tool definitions list.  Defaults to ``ORCHESTRATOR_TOOLS``.
-        use_vis_pipeline: Use the multi-stage pipeline for visualization generation.
-        grammar: Preloaded grammar dict.  Auto-loaded if ``None`` and *use_vis_pipeline* is set.
+        grammar: Preloaded grammar dict.  Auto-loaded if ``None``.
     """
 
     def __init__(
@@ -48,17 +45,12 @@ class Orchestrator:
         agent,
         skills: dict[str, Skill] | None = None,
         tools: list[dict] | None = None,
-        use_vis_pipeline: bool = False,
         grammar: dict | None = None,
     ):
         self.agent = agent
         self.skills = skills if skills is not None else load_skills()
         self.tools = tools if tools is not None else ORCHESTRATOR_TOOLS
-        self.use_vis_pipeline = use_vis_pipeline
-        if use_vis_pipeline and grammar is None:
-            self.grammar = load_grammar("udi")
-        else:
-            self.grammar = grammar
+        self.grammar = grammar if grammar is not None else load_grammar("udi")
 
     # ------------------------------------------------------------------
     # Public API
@@ -80,40 +72,28 @@ class Orchestrator:
             openai_api_key: Optional per-request OpenAI key override.
 
         Returns:
-            An ``OrchestratorResult`` with tool_calls and orchestrator_choice.
+            An ``OrchestratorResult`` with tool_calls.
         """
         msgs = split_tool_calls(messages)
-        tool_calls, choice = self._orchestrate_tool_calls(
-            msgs, data_schema, data_domains,
-            use_pipeline=self.use_vis_pipeline,
+        tool_calls = self._orchestrate_tool_calls(
+            msgs,
+            data_schema,
+            data_domains,
             openai_api_key=openai_api_key,
         )
-        return OrchestratorResult(tool_calls=tool_calls, orchestrator_choice=choice)
-
-    def run_legacy(
-        self,
-        messages: list[dict],
-        data_schema: str,
-        data_domains: str,
-        calls_to_make: str,
-        use_pipeline: bool | None = None,
-        openai_api_key: str | None = None,
-    ) -> list[dict]:
-        """Run legacy if/else orchestration for backward-compatible benchmark overrides."""
-        if use_pipeline is None:
-            use_pipeline = self.use_vis_pipeline
-        msgs = split_tool_calls(messages)
-        return self._run_legacy_orchestration(
-            msgs, data_schema, data_domains, calls_to_make, use_pipeline,
-            openai_api_key=openai_api_key,
-        )
+        return OrchestratorResult(tool_calls=tool_calls)
 
     # ------------------------------------------------------------------
     # Tool dispatch handlers
     # ------------------------------------------------------------------
 
     def _handle_create_visualization(
-        self, tool_args, messages, data_schema, data_domains, use_pipeline, openai_api_key=None,
+        self,
+        tool_args,
+        messages,
+        data_schema,
+        data_domains,
+        openai_api_key=None,
     ):
         description = tool_args.get("description", "")
         if description:
@@ -123,16 +103,13 @@ class Orchestrator:
         else:
             focused_messages = list(messages)
 
-        if use_pipeline:
-            result = function_call_render_visualization_pipeline(
-                self.agent, focused_messages, data_schema, self.grammar,
-                openai_api_key=openai_api_key,
-            )
-        else:
-            result = function_call_render_visualization_legacy(
-                self.agent, focused_messages, data_schema,
-                openai_api_key=openai_api_key,
-            )
+        result = function_call_render_visualization(
+            self.agent,
+            focused_messages,
+            data_schema,
+            self.grammar,
+            openai_api_key=openai_api_key,
+        )
 
         title = tool_args.get("title", "")
         if title:
@@ -141,7 +118,12 @@ class Orchestrator:
         return result
 
     def _handle_rebuff(
-        self, tool_args, messages, data_schema, data_domains, use_pipeline, openai_api_key=None,
+        self,
+        tool_args,
+        messages,
+        data_schema,
+        data_domains,
+        openai_api_key=None,
     ):
         available_capabilities = [
             f"{t['function']['name']}: {t['function']['description']}"
@@ -190,7 +172,12 @@ class Orchestrator:
         }
 
     def _handle_free_text_explain(
-        self, tool_args, messages, data_schema, data_domains, use_pipeline, openai_api_key=None,
+        self,
+        tool_args,
+        messages,
+        data_schema,
+        data_domains,
+        openai_api_key=None,
     ):
         available_tools = "\n".join(
             f"- {t['function']['name']}: {t['function']['description']}"
@@ -257,13 +244,16 @@ class Orchestrator:
         }
 
     def _handle_clarify_variable(
-        self, tool_args, messages, data_schema, data_domains, use_pipeline, openai_api_key=None,
+        self,
+        tool_args,
+        messages,
+        data_schema,
+        data_domains,
+        openai_api_key=None,
     ):
         try:
             schema_raw = (
-                json.loads(data_schema)
-                if isinstance(data_schema, str)
-                else data_schema
+                json.loads(data_schema) if isinstance(data_schema, str) else data_schema
             )
         except (json.JSONDecodeError, TypeError):
             schema_raw = {}
@@ -295,7 +285,12 @@ class Orchestrator:
         }
 
     def _handle_filter_data(
-        self, tool_args, messages, data_schema, data_domains, use_pipeline, openai_api_key=None,
+        self,
+        tool_args,
+        messages,
+        data_schema,
+        data_domains,
+        openai_api_key=None,
     ):
         filter_obj = {
             "filterType": tool_args["filterType"],
@@ -317,7 +312,11 @@ class Orchestrator:
     # ------------------------------------------------------------------
 
     def _orchestrate_tool_calls(
-        self, messages, data_schema, data_domains, use_pipeline=False, openai_api_key=None,
+        self,
+        messages,
+        data_schema,
+        data_domains,
+        openai_api_key=None,
     ):
         msgs = normalize_tool_calls(copy.deepcopy(messages))
 
@@ -351,11 +350,6 @@ class Orchestrator:
         }
 
         tool_calls = []
-        has_vis = False
-        has_filter = False
-        has_rebuff = False
-        has_clarify = False
-        has_explain = False
 
         for tc in choice.message.tool_calls:
             tool_name = tc.function.name
@@ -367,63 +361,12 @@ class Orchestrator:
                 continue
 
             result = handler(
-                tool_args, messages, data_schema, data_domains, use_pipeline,
+                tool_args,
+                messages,
+                data_schema,
+                data_domains,
                 openai_api_key=openai_api_key,
             )
             tool_calls.append(result)
 
-            if tool_name == "CreateVisualization":
-                has_vis = True
-            elif tool_name == "FilterData":
-                has_filter = True
-            elif tool_name == "Rebuff":
-                has_rebuff = True
-            elif tool_name == "ClarifyVariable":
-                has_clarify = True
-            elif tool_name == "FreeTextExplain":
-                has_explain = True
-
-        # Derive orchestrator_choice for backward compatibility
-        if has_explain:
-            orchestrator_choice = "explain"
-        elif has_clarify:
-            orchestrator_choice = "clarify-variable"
-        elif has_rebuff:
-            orchestrator_choice = "rebuff"
-        elif has_vis and has_filter:
-            orchestrator_choice = "both"
-        elif has_filter:
-            orchestrator_choice = "get-subset-of-data"
-        else:
-            orchestrator_choice = "render-visualization"
-
-        return tool_calls, orchestrator_choice
-
-    def _run_legacy_orchestration(
-        self, messages, data_schema, data_domains, calls_to_make, use_pipeline,
-        openai_api_key=None,
-    ):
-        tool_calls = []
-        if calls_to_make in ("both", "get-subset-of-data"):
-            tool_calls.extend(
-                function_call_filter(
-                    self.agent, messages, data_domains,
-                    openai_api_key=openai_api_key,
-                )
-            )
-        if calls_to_make in ("both", "render-visualization"):
-            if use_pipeline:
-                tool_calls.append(
-                    function_call_render_visualization_pipeline(
-                        self.agent, messages, data_schema, self.grammar,
-                        openai_api_key=openai_api_key,
-                    )
-                )
-            else:
-                tool_calls.append(
-                    function_call_render_visualization_legacy(
-                        self.agent, messages, data_schema,
-                        openai_api_key=openai_api_key,
-                    )
-                )
         return tool_calls

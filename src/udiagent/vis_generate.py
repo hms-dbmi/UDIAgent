@@ -110,46 +110,20 @@ def _call_llm_with_tools(agent, messages, tools, config, openai_api_key=None):
     return None
 
 
-def _call_llm(agent, messages, grammar, config, backend, openai_api_key=None):
+def _call_llm(agent, messages, grammar, config, openai_api_key=None):
     """Call the LLM and return the raw spec string."""
-    if backend == "gpt":
-        results = agent.gpt_completions_guided_json(
-            messages=messages,
-            json_schema=grammar["schema_string"],
-            n=config.get("n", 1),
-            openai_api_key=openai_api_key,
-        )
-        if results:
-            result = results[0]
-            if "arguments" in result and "spec" in result["arguments"]:
-                return json.dumps(result["arguments"]["spec"])
-            return json.dumps(result)
-        return "{}"
-    elif backend == "vllm":
-        resp = agent.completions_guided_json(
-            messages=messages,
-            tools=[
-                {
-                    "type": "function",
-                    "function": {
-                        "name": "RenderVisualization",
-                        "description": "Render a visualization with a provided visualization grammar of graphics style specification.",
-                        "parameters": {
-                            "type": "object",
-                            "properties": {
-                                "spec": grammar["schema_dict"],
-                            },
-                            "required": ["spec"],
-                        },
-                    },
-                }
-            ],
-            json_schema=grammar["schema_string"],
-            n=config.get("n", 1),
-        )
-        return resp.choices[0].text
-    else:
-        raise ValueError(f"Unknown backend: {backend}")
+    results = agent.gpt_completions_guided_json(
+        messages=messages,
+        json_schema=grammar["schema_string"],
+        n=config.get("n", 1),
+        openai_api_key=openai_api_key,
+    )
+    if results:
+        result = results[0]
+        if "arguments" in result and "spec" in result["arguments"]:
+            return json.dumps(result["arguments"]["spec"])
+        return json.dumps(result)
+    return "{}"
 
 
 def _parse_and_validate(spec_str, schema_dict):
@@ -416,11 +390,10 @@ def _execute_generate(skill, context):
     config = context["config"]
     data_schema = context["data_schema"]
     data_schema_simple = simplify_data_schema(data_schema)
-    backend = config.get("backend", "gpt")
 
     # --- Primary path: function-calling with generated tools ---
     generated = _load_generated_tools()
-    if generated is not None and backend == "gpt":
+    if generated is not None:
         tool_defs, tool_dispatch, templates, tool_schema = generated
 
         system_msg = (
@@ -500,7 +473,7 @@ def _execute_generate(skill, context):
 
     gen_messages = [{"role": "system", "content": rendered}] + list(context["messages"])
 
-    spec_str = _call_llm(agent, gen_messages, grammar, config, backend, openai_api_key=context.get("openai_api_key"))
+    spec_str = _call_llm(agent, gen_messages, grammar, config, openai_api_key=context.get("openai_api_key"))
     context["spec_str"] = spec_str
     context["gen_messages"] = gen_messages
     context["tool_used"] = None
@@ -513,7 +486,6 @@ def _execute_validate(skill, context):
     agent = context["agent"]
     grammar = context["grammar"]
     config = context["config"]
-    backend = config.get("backend", "gpt")
     max_corrections = config.get("max_corrections", 0)
     spec_str = context.get("spec_str", "{}")
     gen_messages = context.get("gen_messages", list(context["messages"]))
@@ -542,7 +514,7 @@ def _execute_validate(skill, context):
         gen_messages.append({"role": "assistant", "content": feedback_content})
         gen_messages.append({"role": "user", "content": rendered})
 
-        spec_str = _call_llm(agent, gen_messages, grammar, config, backend, openai_api_key=context.get("openai_api_key"))
+        spec_str = _call_llm(agent, gen_messages, grammar, config, openai_api_key=context.get("openai_api_key"))
         spec_dict, errors = _parse_and_validate(spec_str, grammar["schema_dict"])
         corrections += 1
 
@@ -581,7 +553,6 @@ def run_skills(plan, context, registry):
                 messages,
                 context["grammar"],
                 context["config"],
-                context["config"].get("backend", "gpt"),
                 openai_api_key=context.get("openai_api_key"),
             )
             context["spec_str"] = spec_str
@@ -603,7 +574,6 @@ def generate_vis_spec(agent, messages, data_schema, grammar, config=None, openai
         data_schema: JSON string describing available datasets
         grammar: dict from load_grammar()
         config: optional dict with keys:
-            backend: "gpt" | "vllm" (default "gpt")
             n: int (default 1)
             max_corrections: int (default 2)
 

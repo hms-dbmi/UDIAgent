@@ -69,7 +69,6 @@ class TestApiHeaderExtraction:
             mock_agent = UDIAgent.__new__(UDIAgent)
             mock_agent.gpt_model = MagicMock(name="default_gpt_model")
             mock_agent.gpt_model_name = "gpt-4.1"
-            mock_agent.model_name = "test-model"
 
             server_app.agent = mock_agent
             server_app.orchestrator.agent = mock_agent
@@ -94,8 +93,7 @@ class TestApiHeaderExtraction:
             self.server_app.orchestrator,
             "run",
             return_value=MagicMock(
-                tool_calls=[{"name": "RenderVisualization", "arguments": {"spec": {}}}],
-                orchestrator_choice="render-visualization",
+                tool_calls=[{"name": "RenderVisualization", "arguments": {"spec": {}}}]
             ),
         ) as mock_run:
             self.client.post(
@@ -114,10 +112,7 @@ class TestApiHeaderExtraction:
         with patch.object(
             self.server_app.orchestrator,
             "run",
-            return_value=MagicMock(
-                tool_calls=[],
-                orchestrator_choice="render-visualization",
-            ),
+            return_value=MagicMock(tool_calls=[]),
         ) as mock_run:
             self.client.post(
                 "/v1/yac/completions",

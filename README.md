@@ -36,15 +36,12 @@ from udiagent import UDIAgent, Orchestrator
 
 # Initialize the agent with explicit configuration (no environment variables)
 agent = UDIAgent(
-    model_name="HIDIVE/UDI-VIS-Beta-v2-Llama-3.1-8B",
     gpt_model_name="gpt-5.4",
     openai_api_key="sk-...",
-    vllm_server_url="http://localhost",
-    vllm_server_port=55001,
 )
 
 # Create an orchestrator
-orch = Orchestrator(agent, use_vis_pipeline=True)
+orch = Orchestrator(agent)
 
 # Run a query
 result = orch.run(
@@ -61,7 +58,7 @@ result = orch.run(
 
 | Class | Description |
 |---|---|
-| `UDIAgent` | LLM client abstraction for OpenAI and vLLM backends |
+| `UDIAgent` | OpenAI client wrapper |
 | `Orchestrator` | Routes user requests to visualization, filter, explanation, and clarification handlers |
 | `OrchestratorResult` | Dataclass with `tool_calls` and `orchestrator_choice` |
 
@@ -90,23 +87,12 @@ uv run fastapi dev src/udiagent/server/app.py --port 8007
 uv run fastapi run src/udiagent/server/app.py --port 8007
 ```
 
-The fine-tuned model is served separately via vLLM:
-
-```bash
-vllm serve HIDIVE/UDI-VIS-Beta-v2-Llama-3.1-8B --port 55001 --host 127.0.0.1
-```
-
 ### Server Environment Variables
 
 | Variable | Required | Default | Description |
 |---|---|---|---|
 | `OPENAI_API_KEY` | No | — | OpenAI API key. If not set, must be provided per-request via `X-OpenAI-Key` header. |
-| `UDI_MODEL_NAME` | Yes | — | Fine-tuned model name (e.g. `HIDIVE/UDI-VIS-Beta-v2-Llama-3.1-8B`) |
 | `GPT_MODEL_NAME` | No | `gpt-5.4` | OpenAI model for orchestration |
-| `UDI_TOKENIZER_NAME` | No | `UDI_MODEL_NAME` | Tokenizer name (defaults to model name) |
-| `VLLM_SERVER_URL` | No | `http://localhost` | vLLM server hostname |
-| `VLLM_SERVER_PORT` | No | `55001` | vLLM server port |
-| `USE_VIS_PIPELINE` | No | `0` | Set to `1` to enable the multi-stage visualization pipeline |
 | `JWT_SECRET_KEY` | Yes* | — | JWT signing key (*not required if `INSECURE_DEV_MODE=1`) |
 | `JWT_ALGORITHM` | No | `HS256` | JWT algorithm |
 | `INSECURE_DEV_MODE` | No | `0` | Set to `1` to skip JWT verification (development only) |
@@ -145,19 +131,18 @@ User query
     → Return OrchestratorResult(tool_calls, orchestrator_choice)
 ```
 
-### Visualization Generation (when `use_vis_pipeline=True`)
+### Visualization Generation
 
 Executes a two-step markdown skill plan via `generate_vis_spec` (`vis_generate.py`):
 
 1. **generate** — LLM produces a UDI Grammar spec from the request, schema, and few-shot examples
 2. **validate** — JSON schema check with a bounded repair-retry loop
 
-Skills live in `src/udiagent/data/skills/*.md` (YAML frontmatter + prompt body). When the flag is false, the orchestrator falls back to a single-shot vLLM guided-JSON call (`function_call_render_visualization_legacy`).
+Skills live in `src/udiagent/data/skills/*.md` (YAML frontmatter + prompt body).
 
 ### Design Principles
 
 - **Stateless** — All context travels in message history; no server-side session state
-- **Pluggable LLM backends** — OpenAI for orchestration, vLLM for fine-tuned generation
 - **Skills as Markdown** — Prompt templates live in `.md` files with YAML frontmatter
 - **Per-request key override** — Supports both default and per-request OpenAI API keys
 

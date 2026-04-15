@@ -220,52 +220,10 @@ ORCHESTRATOR_TOOLS = [
 # ---------------------------------------------------------------------------
 
 
-def function_call_render_visualization_legacy(
-    agent, messages, data_schema, openai_api_key=None
-):
-    """Legacy single-shot visualization generation via vLLM guided JSON."""
-    from udiagent.grammar import load_grammar
-
-    grammar = load_grammar("udi")
-    msgs = copy.deepcopy(messages)
-    strip_tool_calls(msgs)
-    first_message = {
-        "role": "system",
-        "content": (
-            f"You are a helpful assistant that will explore, and analyze datasets "
-            f"with visualizations. The following defines the available datasets:\n"
-            f"{data_schema}\nTypically, your actions will use the provided functions. "
-            f"You have access to the following functions."
-        ),
-    }
-    msgs.insert(0, first_message)
-    response = agent.completions_guided_json(
-        messages=msgs,
-        tools=[
-            {
-                "type": "function",
-                "function": {
-                    "name": "RenderVisualization",
-                    "description": "Render a visualization with a provided visualization grammar of graphics style specification.",
-                    "parameters": {
-                        "type": "object",
-                        "properties": {
-                            "spec": grammar["schema_dict"],
-                        },
-                        "required": ["spec"],
-                    },
-                },
-            }
-        ],
-        json_schema=grammar["schema_string"],
-    )
-    return json.loads(response.choices[0].text)
-
-
-def function_call_render_visualization_pipeline(
+def function_call_render_visualization(
     agent, messages, data_schema, grammar, openai_api_key=None
 ):
-    """Pipeline-based visualization generation."""
+    """Visualization generation via the skills pipeline."""
     from udiagent.vis_generate import generate_vis_spec
 
     msgs = copy.deepcopy(messages)

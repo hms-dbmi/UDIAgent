@@ -7,9 +7,7 @@ requires-python = ">=3.13"
 license = {text = "MIT"}
 dependencies = [
     "openai>=2.15.0",
-    "jinja2>=3.1.0",
     "jsonschema>=4.26.0",
-    "transformers>=4.57.5",
     "requests>=2.32.5",
     "python-dotenv>=1.0.0",
 ]

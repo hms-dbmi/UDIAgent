@@ -27,7 +27,6 @@ class YACBenchmarkCompletionRequest(BaseModel):
     dataSchema: str
     dataDomains: str
     orchestrator_choice: str | None = None
-    use_pipeline: bool | None = None
 
 
 class UDICompletionRequest(BaseModel):

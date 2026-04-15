@@ -6,9 +6,6 @@ import json
 def split_tool_calls(messages: list[dict]) -> list[dict]:
     """Split messages with multiple tool calls into separate messages.
 
-    This is needed because Jinja templates used by vLLM cannot handle
-    multiple tool calls in a single message.
-
     Returns a new list — does not mutate the input.
     """
     new_messages = []

@@ -59,18 +59,12 @@ config = ServerConfig.from_env()
 
 # --- Agent & Orchestrator ---
 agent = UDIAgent(
-    model_name=config.udi_model_name,
     gpt_model_name=config.gpt_model_name,
-    vllm_server_url=config.vllm_server_url,
-    vllm_server_port=config.vllm_server_port,
-    tokenizer_name=config.udi_tokenizer_name,
-    use_vis_pipeline=config.use_vis_pipeline,
     openai_api_key=config.openai_api_key,
 )
 
 orchestrator = Orchestrator(
     agent=agent,
-    use_vis_pipeline=config.use_vis_pipeline,
 )
 
 # --- FastAPI app ---
@@ -120,7 +114,6 @@ def yac_completions(
         data_domains=request.dataDomains,
         openai_api_key=x_openai_key,
     )
-    logger.info("orchestrator_choice: %s", result.orchestrator_choice)
     logger.info("tool_calls: %s", result.tool_calls)
     return result.tool_calls
 
@@ -131,35 +124,16 @@ def yac_benchmark(
     token_payload: dict = Depends(verify_jwt),
     x_openai_key: str | None = Header(None, alias="X-OpenAI-Key"),
 ):
-    use_pipeline = (
-        request.use_pipeline
-        if request.use_pipeline is not None
-        else config.use_vis_pipeline
+    # New path: tool-calling orchestration
+    result = orchestrator.run(
+        messages=request.messages,
+        data_schema=request.dataSchema,
+        data_domains=request.dataDomains,
+        openai_api_key=x_openai_key,
     )
+    tool_calls = result.tool_calls
 
-    if request.orchestrator_choice is not None:
-        # Legacy path: explicit orchestrator_choice override for A/B testing
-        tool_calls = orchestrator.run_legacy(
-            messages=request.messages,
-            data_schema=request.dataSchema,
-            data_domains=request.dataDomains,
-            calls_to_make=request.orchestrator_choice,
-            use_pipeline=use_pipeline,
-            openai_api_key=x_openai_key,
-        )
-        calls_to_make = request.orchestrator_choice
-    else:
-        # New path: tool-calling orchestration
-        result = orchestrator.run(
-            messages=request.messages,
-            data_schema=request.dataSchema,
-            data_domains=request.dataDomains,
-            openai_api_key=x_openai_key,
-        )
-        tool_calls = result.tool_calls
-        calls_to_make = result.orchestrator_choice
-
-    return {"tool_calls": tool_calls, "orchestrator_choice": calls_to_make}
+    return {"tool_calls": tool_calls}
 
 
 @app.get("/v1/yac/examples")
