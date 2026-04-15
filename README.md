@@ -71,6 +71,7 @@ result = orch.run(
 |---|---|
 | `load_grammar()` | Load the UDI Grammar JSON schema (bundled with the package) |
 | `load_skills()` | Load skill prompt templates (bundled with the package) |
+| `render_template()` | Substitute `{{key}}` placeholders in a skill instruction template |
 | `generate_vis_spec()` | Generate a visualization spec using the skills pipeline |
 | `run_vis_pipeline()` | Run the 4-stage modular pipeline (plan/retrieve/generate/validate) |
 | `simplify_data_domains()` | Simplify data domains JSON into compact LLM-friendly text |

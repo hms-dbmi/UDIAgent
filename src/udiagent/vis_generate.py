@@ -14,29 +14,9 @@ from typing import Optional
 
 import jsonschema
 
-from udiagent.grammar import Skill, load_skills, load_grammar, _package_data_path
+from udiagent.skills import Skill, load_skills, render_template, _package_data_path
+from udiagent.grammar import load_grammar
 from udiagent.schema import simplify_data_schema, simplify_data_domains
-
-
-# ---------------------------------------------------------------------------
-# Template rendering
-# ---------------------------------------------------------------------------
-
-
-def _render_template(instructions, variables):
-    """Replace {{key}} placeholders in instructions with values from variables.
-
-    Supports including arbitrary textual data in skill prompts.
-    Unknown placeholders are left as-is.
-    """
-
-    def replacer(m):
-        key = m.group(1).strip()
-        if key in variables:
-            return str(variables[key])
-        return m.group(0)
-
-    return re.sub(r"\{\{(.+?)\}\}", replacer, instructions)
 
 
 # ---------------------------------------------------------------------------
@@ -510,7 +490,7 @@ def _execute_generate(skill, context):
     examples_path = config.get("examples_path")
     examples = _load_examples(examples_path)
 
-    rendered = _render_template(
+    rendered = render_template(
         skill.instructions,
         {
             "data_schema": data_schema_simple,
@@ -545,7 +525,7 @@ def _execute_validate(skill, context):
 
     corrections = 0
     while errors and corrections < max_corrections:
-        rendered = _render_template(
+        rendered = render_template(
             skill.instructions,
             {
                 "spec_str": spec_str
@@ -592,7 +572,7 @@ def run_skills(plan, context, registry):
         if executor_fn is not None:
             context = executor_fn(skill, context)
         else:
-            rendered = _render_template(skill.instructions, context)
+            rendered = render_template(skill.instructions, context)
             messages = [{"role": "system", "content": rendered}] + list(
                 context["messages"]
             )

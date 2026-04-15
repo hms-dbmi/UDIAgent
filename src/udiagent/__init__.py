@@ -2,8 +2,9 @@
 
 from udiagent.agent import UDIAgent
 from udiagent.orchestrator import Orchestrator, OrchestratorResult
-from udiagent.grammar import Skill, load_grammar, load_skills
-from udiagent.vis_generate import generate_vis_spec, _render_template
+from udiagent.skills import Skill, load_skills, render_template
+from udiagent.grammar import load_grammar
+from udiagent.vis_generate import generate_vis_spec
 from udiagent.vis_pipeline import run_vis_pipeline
 from udiagent.schema import parse_schema_from_dict, simplify_data_domains, simplify_data_schema
 from udiagent.messages import split_tool_calls, normalize_tool_calls, strip_tool_calls
@@ -35,5 +36,5 @@ __all__ = [
     "get_function_signatures",
     "export_registry_json",
     "ORCHESTRATOR_TOOLS",
-    "_render_template",
+    "render_template",
 ]

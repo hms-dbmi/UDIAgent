@@ -5,7 +5,8 @@ import json
 import logging
 from dataclasses import dataclass, field
 
-from udiagent.grammar import Skill, load_skills, load_grammar
+from udiagent.skills import Skill, load_skills, render_template
+from udiagent.grammar import load_grammar
 from udiagent.messages import normalize_tool_calls, strip_tool_calls, split_tool_calls
 from udiagent.schema import parse_schema_from_dict, simplify_data_domains
 from udiagent.structured_functions import (
@@ -19,7 +20,6 @@ from udiagent.tools import (
     function_call_render_visualization_legacy,
     function_call_render_visualization_pipeline,
 )
-from udiagent.vis_generate import _render_template
 
 logger = logging.getLogger(__name__)
 
@@ -151,7 +151,7 @@ class Orchestrator:
 
         rebuff_skill = self.skills.get("rebuff")
         if rebuff_skill:
-            rendered = _render_template(
+            rendered = render_template(
                 rebuff_skill.instructions,
                 {
                     "user_request": tool_args.get("user_request", ""),
@@ -202,7 +202,7 @@ class Orchestrator:
 
         explain_skill = self.skills.get("free_text_explain")
         if explain_skill:
-            rendered = _render_template(
+            rendered = render_template(
                 explain_skill.instructions,
                 {
                     "user_request": tool_args.get("user_request", ""),
@@ -322,7 +322,7 @@ class Orchestrator:
         msgs = normalize_tool_calls(copy.deepcopy(messages))
 
         orchestrate_skill = self.skills["orchestrate"]
-        rendered = _render_template(
+        rendered = render_template(
             orchestrate_skill.instructions,
             {"data_domains": simplify_data_domains(data_domains)},
         )
