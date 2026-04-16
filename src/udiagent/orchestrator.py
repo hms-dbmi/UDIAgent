@@ -7,7 +7,7 @@ from dataclasses import dataclass, field
 
 from udiagent.skills import Skill, load_skills, render_template
 from udiagent.grammar import load_grammar
-from udiagent.messages import normalize_tool_calls, strip_tool_calls, split_tool_calls
+from udiagent.messages import normalize_tool_calls, split_tool_calls
 from udiagent.schema import parse_schema_from_dict, simplify_data_domains
 from udiagent.structured_functions import (
     validate_structured_text,
@@ -144,8 +144,7 @@ class Orchestrator:
                 },
             )
             gpt_client = self.agent._get_gpt_client(openai_api_key)
-            msgs = copy.deepcopy(messages)
-            strip_tool_calls(msgs)
+            msgs = normalize_tool_calls(copy.deepcopy(messages))
             msgs.insert(0, {"role": "system", "content": rendered})
             resp = gpt_client.chat.completions.create(
                 model=self.agent.gpt_model_name,
@@ -200,8 +199,7 @@ class Orchestrator:
                 },
             )
             gpt_client = self.agent._get_gpt_client(openai_api_key)
-            msgs = copy.deepcopy(messages)
-            strip_tool_calls(msgs)
+            msgs = normalize_tool_calls(copy.deepcopy(messages))
             msgs.insert(0, {"role": "system", "content": rendered})
             resp = gpt_client.chat.completions.create(
                 model=self.agent.gpt_model_name,

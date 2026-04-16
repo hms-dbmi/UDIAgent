@@ -4,7 +4,7 @@ import copy
 import json
 import logging
 
-from udiagent.messages import strip_tool_calls
+from udiagent.messages import normalize_tool_calls
 from udiagent.schema import simplify_data_domains
 
 logger = logging.getLogger(__name__)
@@ -226,8 +226,7 @@ def function_call_render_visualization(
     """Visualization generation via the skills pipeline."""
     from udiagent.vis_generate import generate_vis_spec
 
-    msgs = copy.deepcopy(messages)
-    strip_tool_calls(msgs)
+    msgs = normalize_tool_calls(copy.deepcopy(messages))
     result = generate_vis_spec(
         agent=agent,
         messages=msgs,

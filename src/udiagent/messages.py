@@ -98,14 +98,3 @@ def normalize_tool_calls(messages: list[dict]) -> list[dict]:
                 )
 
     return result
-
-
-def strip_tool_calls(messages: list[dict]) -> list[dict]:
-    """Remove tool_calls from messages (used by legacy code paths).
-
-    Mutates in-place and returns the list for convenience.
-    """
-    for message in messages:
-        if "tool_calls" in message:
-            del message["tool_calls"]
-    return messages
