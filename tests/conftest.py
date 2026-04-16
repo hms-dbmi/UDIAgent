@@ -10,7 +10,7 @@ os.environ["INSECURE_DEV_MODE"] = "1"
 os.environ["OPENAI_API_KEY"] = "test-default-key"
 os.environ["UDI_MODEL_NAME"] = "test-model"
 
-# Mock langfuse.openai before any test imports udi_agent.
+# Mock langfuse.openai before any test imports udiagent.
 # langfuse uses pydantic.v1 which is incompatible with Python 3.14.
 # We provide a fake OpenAI class that records its init kwargs.
 _langfuse_openai = MagicMock()
