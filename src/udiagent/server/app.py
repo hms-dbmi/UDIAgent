@@ -21,7 +21,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from udiagent.agent import UDIAgent
-from udiagent.messages import split_tool_calls
 from udiagent.orchestrator import Orchestrator
 from udiagent.structured_functions import export_registry_json
 from udiagent.server.config import ServerConfig
@@ -132,7 +131,10 @@ def yac_benchmark(
         openai_api_key=x_openai_key,
     )
 
-    return {"tool_calls": result.tool_calls, "orchestrator_choice": result.orchestrator_choice}
+    return {
+        "tool_calls": result.tool_calls,
+        "orchestrator_choice": result.orchestrator_choice,
+    }
 
 
 @app.get("/v1/yac/examples")
