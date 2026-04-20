@@ -3,7 +3,7 @@ name = "udiagent"
 version = "0.2.0"
 description = "UDI Agent: LLM-powered data visualization orchestration library"
 readme = "README.md"
-requires-python = ">=3.13"
+requires-python = ">=3.12"
 license = {text = "MIT"}
 dependencies = [
     "openai>=2.15.0",
