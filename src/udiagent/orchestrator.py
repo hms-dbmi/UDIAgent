@@ -249,34 +249,38 @@ class Orchestrator:
         data_domains,
         openai_api_key=None,
     ):
-        try:
-            schema_raw = (
-                json.loads(data_schema) if isinstance(data_schema, str) else data_schema
-            )
-        except (json.JSONDecodeError, TypeError):
-            schema_raw = {}
-
-        field_meta = {}
-        for resource in schema_raw.get("resources", []):
-            entity_name = resource.get("name", "")
-            for field_def in resource.get("schema", {}).get("fields", []):
-                fname = field_def.get("name", "")
-                field_meta[(entity_name, fname)] = {
-                    "data_type": field_def.get("udi:data_type", "unknown"),
-                    "description": field_def.get("description", "").strip(),
-                }
-
+        clarification_type = tool_args.get("clarification_type", "variable")
         ambiguous_variables = tool_args.get("ambiguous_variables", [])
-        for var in ambiguous_variables:
-            for candidate in var.get("candidates", []):
-                key = (candidate.get("entity", ""), candidate.get("field_name", ""))
-                meta = field_meta.get(key, {})
-                candidate["data_type"] = meta.get("data_type", "unknown")
-                candidate["description"] = meta.get("description", "")
+
+        if clarification_type == "variable":
+            try:
+                schema_raw = (
+                    json.loads(data_schema) if isinstance(data_schema, str) else data_schema
+                )
+            except (json.JSONDecodeError, TypeError):
+                schema_raw = {}
+
+            field_meta = {}
+            for resource in schema_raw.get("resources", []):
+                entity_name = resource.get("name", "")
+                for field_def in resource.get("schema", {}).get("fields", []):
+                    fname = field_def.get("name", "")
+                    field_meta[(entity_name, fname)] = {
+                        "data_type": field_def.get("udi:data_type", "unknown"),
+                        "description": field_def.get("description", "").strip(),
+                    }
+
+            for var in ambiguous_variables:
+                for candidate in var.get("candidates", []):
+                    key = (candidate.get("entity", ""), candidate.get("field_name", ""))
+                    meta = field_meta.get(key, {})
+                    candidate["data_type"] = meta.get("data_type", "unknown")
+                    candidate["description"] = meta.get("description", "")
 
         return {
             "name": "ClarifyVariable",
             "arguments": {
+                "clarification_type": clarification_type,
                 "message": tool_args.get("message", ""),
                 "ambiguous_variables": ambiguous_variables,
             },
