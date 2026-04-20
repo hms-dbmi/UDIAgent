@@ -166,13 +166,26 @@ ORCHESTRATOR_TOOLS = [
         "function": {
             "name": "FilterData",
             "description": (
-                "Filter the dataset to a subset of rows. Use for categorical filters "
-                "(e.g. filter to Female donors) or numeric range filters (e.g. filter "
-                "to age > 50). Call this tool multiple times for multiple filters."
+                "Add, modify, or remove a filter on the dataset. Use 'add' to "
+                "introduce a new filter, 'modify' to update an existing filter's "
+                "values (same entity/field), and 'remove' to clear an existing "
+                "filter. Filters are identified by their (entity, field) pair — "
+                "only one filter per (entity, field) is allowed; re-filtering an "
+                "already-filtered field must use 'modify'. Call this tool once "
+                "per filter operation."
             ),
             "parameters": {
                 "type": "object",
                 "properties": {
+                    "action": {
+                        "type": "string",
+                        "enum": ["add", "modify", "remove"],
+                        "description": (
+                            "The filter operation: 'add' for a new filter on an "
+                            "unfiltered field, 'modify' to change the values of an "
+                            "existing filter, 'remove' to drop an existing filter."
+                        ),
+                    },
                     "title": {
                         "type": "string",
                         "description": "A short, informative title for the filter (e.g. 'Donor Sex', 'Donor Age', 'Sample Assay Type').",
@@ -188,7 +201,7 @@ ORCHESTRATOR_TOOLS = [
                     "filterType": {
                         "type": "string",
                         "enum": ["point", "interval"],
-                        "description": "Type of filter: 'point' for categorical values, 'interval' for numeric ranges.",
+                        "description": "Type of filter: 'point' for categorical values, 'interval' for numeric ranges. Required for 'add' and 'modify'; may be omitted for 'remove'.",
                     },
                     "intervalRange": {
                         "type": "object",
@@ -207,7 +220,7 @@ ORCHESTRATOR_TOOLS = [
                         "description": "Values to filter for. Required when filterType is 'point'.",
                     },
                 },
-                "required": ["entity", "field", "filterType"],
+                "required": ["action", "entity", "field"],
                 "additionalProperties": False,
             },
         },

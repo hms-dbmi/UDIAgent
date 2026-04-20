@@ -22,6 +22,116 @@ from udiagent.tools import (
 logger = logging.getLogger(__name__)
 
 
+def _build_schema_field_meta(schema_raw: dict) -> dict:
+    """Map (entity, field_name) → {data_type, description} from a raw schema dict."""
+    meta: dict = {}
+    for resource in schema_raw.get("resources", []):
+        entity_name = resource.get("name", "")
+        for field_def in resource.get("schema", {}).get("fields", []):
+            fname = field_def.get("name", "")
+            meta[(entity_name, fname)] = {
+                "data_type": field_def.get("udi:data_type", "unknown"),
+                "description": field_def.get("description", "").strip(),
+            }
+    return meta
+
+
+def _format_current_filters(current_filters: list[dict]) -> str:
+    """Render the current-filters list into a compact, LLM-friendly block."""
+    if not current_filters:
+        return "(none — no filters are currently applied)"
+    lines = []
+    for idx, f in enumerate(current_filters, start=1):
+        entity = f.get("entity", "?")
+        field = f.get("field", "?")
+        filt = f.get("filter", {}) or {}
+        ftype = filt.get("filterType", "?")
+        if ftype == "interval":
+            rng = filt.get("intervalRange", {}) or {}
+            detail = f"range [{rng.get('min', '?')}, {rng.get('max', '?')}]"
+        elif ftype == "point":
+            vals = filt.get("pointValues", []) or []
+            detail = f"values {vals}"
+        else:
+            detail = ""
+        title = f.get("title", "").strip()
+        title_suffix = f" — {title}" if title else ""
+        lines.append(
+            f"{idx}. entity={entity}, field={field}, type={ftype}, {detail}{title_suffix}"
+        )
+    return "\n".join(lines)
+
+
+def _validate_filter_action(
+    tool_args: dict, schema_keys: set, current_filters: list[dict]
+) -> list[str]:
+    """Validate a FilterData tool call against the schema and current filters."""
+    errors: list[str] = []
+    action = tool_args.get("action", "add")
+    entity = tool_args.get("entity", "")
+    field = tool_args.get("field", "")
+
+    if action not in ("add", "modify", "remove"):
+        errors.append(f"Unknown action {action!r}; expected 'add', 'modify', or 'remove'.")
+        return errors
+
+    if schema_keys and (entity, field) not in schema_keys:
+        errors.append(
+            f"({entity!r}, {field!r}) is not a valid (entity, field) pair in the schema."
+        )
+
+    current_keys = {(f.get("entity", ""), f.get("field", "")) for f in current_filters}
+    target_key = (entity, field)
+
+    if action == "add" and target_key in current_keys:
+        errors.append(
+            f"Filter on ({entity!r}, {field!r}) already exists. "
+            f"Use action='modify' to change it instead of 'add'."
+        )
+    if action in ("modify", "remove") and target_key not in current_keys:
+        errors.append(
+            f"No existing filter on ({entity!r}, {field!r}); cannot {action}. "
+            f"Use action='add' for a new filter."
+        )
+
+    if action in ("add", "modify"):
+        ftype = tool_args.get("filterType")
+        if ftype not in ("point", "interval"):
+            errors.append(
+                f"filterType must be 'point' or 'interval' for action={action!r}; got {ftype!r}."
+            )
+        elif ftype == "point" and not tool_args.get("pointValues"):
+            errors.append(
+                f"action={action!r} with filterType='point' requires non-empty pointValues."
+            )
+        elif ftype == "interval" and not tool_args.get("intervalRange"):
+            errors.append(
+                f"action={action!r} with filterType='interval' requires intervalRange."
+            )
+
+    return errors
+
+
+def _build_filter_payload(tool_args: dict, validation_retries: int) -> dict:
+    """Shape the outgoing FilterData tool-call arguments for the frontend."""
+    action = tool_args.get("action", "add")
+    payload = {
+        "action": action,
+        "title": tool_args.get("title", ""),
+        "entity": tool_args.get("entity", ""),
+        "field": tool_args.get("field", ""),
+        "validation_retries": validation_retries,
+    }
+    if action == "remove":
+        return payload
+    payload["filter"] = {
+        "filterType": tool_args.get("filterType", "point"),
+        "intervalRange": tool_args.get("intervalRange", {"min": 0, "max": 0}),
+        "pointValues": tool_args.get("pointValues", [""]),
+    }
+    return payload
+
+
 @dataclass
 class OrchestratorResult:
     """Result of an orchestration run."""
@@ -61,6 +171,7 @@ class Orchestrator:
         messages: list[dict],
         data_schema: str,
         data_domains: str,
+        current_filters: list[dict] | None = None,
         openai_api_key: str | None = None,
     ) -> OrchestratorResult:
         """Run the orchestrator on a user request.
@@ -69,6 +180,11 @@ class Orchestrator:
             messages: Chat history (OpenAI message format).
             data_schema: JSON string describing dataset entities and fields.
             data_domains: JSON string (or list) describing field domains.
+            current_filters: The currently-applied filters (as a list of dicts
+                with at least ``entity``, ``field``, and ``filter``). Passed
+                explicitly into the orchestrate prompt so the LLM can decide
+                between add/modify/remove actions without inferring state
+                from message history.
             openai_api_key: Optional per-request OpenAI key override.
 
         Returns:
@@ -79,6 +195,7 @@ class Orchestrator:
             msgs,
             data_schema,
             data_domains,
+            current_filters=current_filters or [],
             openai_api_key=openai_api_key,
         )
         return OrchestratorResult(tool_calls=tool_calls, orchestrator_choice=choice)
@@ -288,22 +405,103 @@ class Orchestrator:
         messages,
         data_schema,
         data_domains,
+        current_filters=None,
         openai_api_key=None,
     ):
-        filter_obj = {
-            "filterType": tool_args["filterType"],
-            "intervalRange": tool_args.get("intervalRange", {"min": 0, "max": 0}),
-            "pointValues": tool_args.get("pointValues", [""]),
-        }
+        current_filters = current_filters or []
+        validation_retries = 0
+
+        try:
+            schema_raw = (
+                json.loads(data_schema) if isinstance(data_schema, str) else data_schema
+            )
+        except (json.JSONDecodeError, TypeError):
+            schema_raw = {}
+        schema_keys = set(_build_schema_field_meta(schema_raw).keys())
+
+        errors = _validate_filter_action(tool_args, schema_keys, current_filters)
+        if errors:
+            retried = self._retry_filter_data(
+                prev_tool_args=tool_args,
+                errors=errors,
+                messages=messages,
+                data_domains=data_domains,
+                current_filters=current_filters,
+                openai_api_key=openai_api_key,
+            )
+            validation_retries = 1
+            if retried is not None:
+                tool_args = retried
+
         return {
             "name": "FilterData",
-            "arguments": {
-                "title": tool_args.get("title", ""),
-                "entity": tool_args["entity"],
-                "field": tool_args["field"],
-                "filter": filter_obj,
-            },
+            "arguments": _build_filter_payload(tool_args, validation_retries),
         }
+
+    def _retry_filter_data(
+        self,
+        prev_tool_args,
+        errors,
+        messages,
+        data_domains,
+        current_filters,
+        openai_api_key,
+    ):
+        """Re-invoke the LLM constrained to FilterData with error feedback."""
+        orchestrate_skill = self.skills.get("orchestrate")
+        if orchestrate_skill is None:
+            return None
+        filter_tool = next(
+            (t for t in self.tools if t["function"]["name"] == "FilterData"),
+            None,
+        )
+        if filter_tool is None:
+            return None
+
+        rendered = render_template(
+            orchestrate_skill.instructions,
+            {
+                "data_domains": simplify_data_domains(data_domains),
+                "current_filters": _format_current_filters(current_filters),
+            },
+        )
+        retry_msgs = normalize_tool_calls(copy.deepcopy(messages))
+        retry_msgs.insert(0, {"role": "system", "content": rendered})
+        hint = "The previous tool call had errors:\n" + "\n".join(
+            f"- {e}" for e in errors
+        )
+        retry_msgs.append(
+            {
+                "role": "assistant",
+                "content": f"Tool call: FilterData({json.dumps(prev_tool_args)})",
+            }
+        )
+        retry_msgs.append(
+            {
+                "role": "user",
+                "content": hint
+                + "\n\nReturn a corrected FilterData call. Pick 'add', 'modify', or 'remove' according to the Current Filters list.",
+            }
+        )
+
+        gpt_client = self.agent._get_gpt_client(openai_api_key)
+        try:
+            resp = gpt_client.chat.completions.create(
+                model=self.agent.gpt_model_name,
+                messages=retry_msgs,
+                tools=[filter_tool],
+                tool_choice={
+                    "type": "function",
+                    "function": {"name": "FilterData"},
+                },
+                temperature=0.0,
+                max_completion_tokens=1024,
+            )
+            tc = resp.choices[0].message.tool_calls[0]
+            return json.loads(tc.function.arguments)
+        except Exception as exc:
+            logger.warning("FilterData retry failed: %s", exc)
+            return None
 
     # ------------------------------------------------------------------
     # Core orchestration logic
@@ -314,6 +512,7 @@ class Orchestrator:
         messages,
         data_schema,
         data_domains,
+        current_filters=None,
         openai_api_key=None,
     ):
         msgs = normalize_tool_calls(copy.deepcopy(messages))
@@ -321,7 +520,10 @@ class Orchestrator:
         orchestrate_skill = self.skills["orchestrate"]
         rendered = render_template(
             orchestrate_skill.instructions,
-            {"data_domains": simplify_data_domains(data_domains)},
+            {
+                "data_domains": simplify_data_domains(data_domains),
+                "current_filters": _format_current_filters(current_filters or []),
+            },
         )
         msgs.insert(0, {"role": "system", "content": rendered})
 
@@ -363,12 +565,16 @@ class Orchestrator:
                 logger.warning("Unknown tool: %s, skipping", tool_name)
                 continue
 
+            handler_kwargs = {"openai_api_key": openai_api_key}
+            if tool_name == "FilterData":
+                handler_kwargs["current_filters"] = current_filters or []
+
             result = handler(
                 tool_args,
                 messages,
                 data_schema,
                 data_domains,
-                openai_api_key=openai_api_key,
+                **handler_kwargs,
             )
             tool_calls.append(result)
 
