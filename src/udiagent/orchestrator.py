@@ -22,6 +22,38 @@ from udiagent.tools import (
 logger = logging.getLogger(__name__)
 
 
+def _build_schema_field_meta(schema_raw: dict) -> dict:
+    """Map (entity, field_name) → {data_type, description} from a raw schema dict."""
+    meta: dict = {}
+    for resource in schema_raw.get("resources", []):
+        entity_name = resource.get("name", "")
+        for field_def in resource.get("schema", {}).get("fields", []):
+            fname = field_def.get("name", "")
+            meta[(entity_name, fname)] = {
+                "data_type": field_def.get("udi:data_type", "unknown"),
+                "description": field_def.get("description", "").strip(),
+            }
+    return meta
+
+
+def _validate_variable_candidates(
+    ambiguous_variables: list, valid_keys: set
+) -> list[str]:
+    """Return a list of human-readable errors for candidates that don't match the schema."""
+    errors: list[str] = []
+    for var in ambiguous_variables:
+        query_term = var.get("query_term", "?")
+        for candidate in var.get("candidates", []):
+            entity = candidate.get("entity", "")
+            field = candidate.get("field_name", "")
+            if (entity, field) not in valid_keys:
+                errors.append(
+                    f"Candidate for '{query_term}': (entity={entity!r}, field_name={field!r}) "
+                    f"is not in the schema. Use the bare field name only."
+                )
+    return errors
+
+
 @dataclass
 class OrchestratorResult:
     """Result of an orchestration run."""
@@ -250,41 +282,133 @@ class Orchestrator:
         openai_api_key=None,
     ):
         clarification_type = tool_args.get("clarification_type", "variable")
+
+        if clarification_type != "variable":
+            return {
+                "name": "ClarifyVariable",
+                "arguments": {
+                    "clarification_type": clarification_type,
+                    "message": tool_args.get("message", ""),
+                    "ambiguous_variables": tool_args.get("ambiguous_variables", []),
+                    "validation_retries": 0,
+                },
+            }
+
+        try:
+            schema_raw = (
+                json.loads(data_schema) if isinstance(data_schema, str) else data_schema
+            )
+        except (json.JSONDecodeError, TypeError):
+            schema_raw = {}
+
+        field_meta = _build_schema_field_meta(schema_raw)
+        valid_keys = set(field_meta.keys())
+
+        validation_retries = 0
         ambiguous_variables = tool_args.get("ambiguous_variables", [])
+        message = tool_args.get("message", "")
 
-        if clarification_type == "variable":
-            try:
-                schema_raw = (
-                    json.loads(data_schema) if isinstance(data_schema, str) else data_schema
+        errors = _validate_variable_candidates(ambiguous_variables, valid_keys)
+        if errors:
+            retried = self._retry_clarify_variable(
+                prev_tool_args={
+                    "clarification_type": "variable",
+                    "message": message,
+                    "ambiguous_variables": ambiguous_variables,
+                },
+                errors=errors,
+                messages=messages,
+                data_domains=data_domains,
+                openai_api_key=openai_api_key,
+            )
+            validation_retries = 1
+            if retried is not None:
+                ambiguous_variables = retried.get(
+                    "ambiguous_variables", ambiguous_variables
                 )
-            except (json.JSONDecodeError, TypeError):
-                schema_raw = {}
+                message = retried.get("message", message)
 
-            field_meta = {}
-            for resource in schema_raw.get("resources", []):
-                entity_name = resource.get("name", "")
-                for field_def in resource.get("schema", {}).get("fields", []):
-                    fname = field_def.get("name", "")
-                    field_meta[(entity_name, fname)] = {
-                        "data_type": field_def.get("udi:data_type", "unknown"),
-                        "description": field_def.get("description", "").strip(),
-                    }
-
-            for var in ambiguous_variables:
-                for candidate in var.get("candidates", []):
-                    key = (candidate.get("entity", ""), candidate.get("field_name", ""))
-                    meta = field_meta.get(key, {})
-                    candidate["data_type"] = meta.get("data_type", "unknown")
-                    candidate["description"] = meta.get("description", "")
+        for var in ambiguous_variables:
+            for candidate in var.get("candidates", []):
+                key = (candidate.get("entity", ""), candidate.get("field_name", ""))
+                meta = field_meta.get(key, {})
+                candidate["data_type"] = meta.get("data_type", "unknown")
+                candidate["description"] = meta.get("description", "")
 
         return {
             "name": "ClarifyVariable",
             "arguments": {
-                "clarification_type": clarification_type,
-                "message": tool_args.get("message", ""),
+                "clarification_type": "variable",
+                "message": message,
                 "ambiguous_variables": ambiguous_variables,
+                "validation_retries": validation_retries,
             },
         }
+
+    def _retry_clarify_variable(
+        self,
+        prev_tool_args,
+        errors,
+        messages,
+        data_domains,
+        openai_api_key,
+    ):
+        """Re-invoke the LLM constrained to ClarifyVariable with error feedback.
+
+        Returns the corrected tool arguments dict, or None on failure.
+        """
+        orchestrate_skill = self.skills.get("orchestrate")
+        if orchestrate_skill is None:
+            return None
+
+        clarify_tool = next(
+            (t for t in self.tools if t["function"]["name"] == "ClarifyVariable"),
+            None,
+        )
+        if clarify_tool is None:
+            return None
+
+        rendered = render_template(
+            orchestrate_skill.instructions,
+            {"data_domains": simplify_data_domains(data_domains)},
+        )
+        retry_msgs = normalize_tool_calls(copy.deepcopy(messages))
+        retry_msgs.insert(0, {"role": "system", "content": rendered})
+        hint = "The previous tool call had errors:\n" + "\n".join(
+            f"- {e}" for e in errors
+        )
+        retry_msgs.append(
+            {
+                "role": "assistant",
+                "content": f"Tool call: ClarifyVariable({json.dumps(prev_tool_args)})",
+            }
+        )
+        retry_msgs.append(
+            {
+                "role": "user",
+                "content": hint
+                + "\n\nReturn a corrected ClarifyVariable call. Use bare field names from the schema, never qualified names like 'entity.field'.",
+            }
+        )
+
+        gpt_client = self.agent._get_gpt_client(openai_api_key)
+        try:
+            resp = gpt_client.chat.completions.create(
+                model=self.agent.gpt_model_name,
+                messages=retry_msgs,
+                tools=[clarify_tool],
+                tool_choice={
+                    "type": "function",
+                    "function": {"name": "ClarifyVariable"},
+                },
+                temperature=0.0,
+                max_completion_tokens=1024,
+            )
+            tc = resp.choices[0].message.tool_calls[0]
+            return json.loads(tc.function.arguments)
+        except Exception as exc:
+            logger.warning("ClarifyVariable retry failed: %s", exc)
+            return None
 
     def _handle_filter_data(
         self,
