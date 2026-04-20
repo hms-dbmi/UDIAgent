@@ -4,15 +4,23 @@ import json
 
 
 def parse_schema_from_dict(raw: dict) -> dict:
-    """Parse a data schema dict into the structure expected by structured_functions.
+    """Parse a data schema dict into the structure expected downstream.
 
-    Similar to generate_tools.parse_schema but works with an in-memory dict
-    instead of a file path.
+    Produces the same shape as ``generate_tools.parse_schema`` but works with
+    an in-memory dict instead of a file path, so it can be called per-request
+    using the schema the frontend provided. Returns ``{"entities": {...},
+    "relationships": [...]}`` — ``validate_bindings`` and
+    ``instantiate_template`` in ``vis_generate`` consume both keys (the
+    latter resolves ``<E.url>`` placeholders via the per-entity ``url``).
     """
+    base_path = raw.get("udi:path", "./")
     entities = {}
+    relationships: list[dict] = []
     for resource in raw.get("resources", []):
         name = resource["name"]
         row_count = resource.get("udi:row_count", 0)
+        path = resource.get("path", "")
+        url = base_path + path
         fields = {}
         for field in resource.get("schema", {}).get("fields", []):
             cardinality = field.get("udi:cardinality", 0)
@@ -22,8 +30,28 @@ def parse_schema_from_dict(raw: dict) -> dict:
                 "type": field.get("udi:data_type", ""),
                 "cardinality": cardinality,
             }
-        entities[name] = {"row_count": row_count, "fields": fields}
-    return {"entities": entities}
+        entities[name] = {
+            "url": url,
+            "row_count": row_count,
+            "fields": fields,
+        }
+
+        for fk in resource.get("schema", {}).get("foreignKeys", []):
+            reference = fk.get("reference", {}) or {}
+            card = fk.get("udi:cardinality", {}) or {}
+            from_fields = fk.get("fields", [""]) or [""]
+            to_fields = reference.get("fields", [""]) or [""]
+            relationships.append(
+                {
+                    "from_entity": name,
+                    "to_entity": reference.get("resource", ""),
+                    "from_field": from_fields[0] if from_fields else "",
+                    "to_field": to_fields[0] if to_fields else "",
+                    "from_cardinality": card.get("from", "many"),
+                    "to_cardinality": card.get("to", "one"),
+                }
+            )
+    return {"entities": entities, "relationships": relationships}
 
 
 def simplify_data_schema(data_schema):

@@ -148,22 +148,18 @@ Skills live in `src/udiagent/data/skills/*.md` (YAML frontmatter + prompt body).
 
 ## Regenerating Template Visualizations and Tool Definitions
 
-The vis pipeline uses two generated artifacts:
+The vis pipeline uses two generated artifacts, both **dataset-agnostic**:
 
-- `src/udiagent/data/skills/template_visualizations.json` — template visualization specs
-- `src/udiagent/generated_vis_tools.py` — typed OpenAI function-calling tool definitions
+- `src/udiagent/data/skills/template_visualizations.json` — template visualization specs using `<E>`/`<F>` placeholders
+- `src/udiagent/generated_vis_tools.py` — typed OpenAI function-calling tool definitions (`TOOL_DEFS`, `TOOL_DISPATCH`, `TEMPLATES`)
+
+Neither artifact is tied to a specific dataset. The per-request data schema (sent by the frontend as `dataSchema`) is parsed at runtime and used for placeholder substitution and validation.
 
 To regenerate both in one step:
 
 ```bash
 uv pip install -e ".[codegen]"
 uv run python scripts/regenerate_vis_tools.py
-```
-
-By default this uses `data/data_domains/hubmap_data_schema.json` as the schema. To use a different schema:
-
-```bash
-uv run python scripts/regenerate_vis_tools.py --schema data/data_domains/SenNet_domains.json
 ```
 
 ## Benchmarking

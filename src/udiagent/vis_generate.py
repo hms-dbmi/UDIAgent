@@ -16,7 +16,11 @@ import jsonschema
 
 from udiagent.skills import Skill, load_skills, render_template, _package_data_path
 from udiagent.grammar import load_grammar
-from udiagent.schema import simplify_data_schema, simplify_data_domains
+from udiagent.schema import (
+    parse_schema_from_dict,
+    simplify_data_domains,
+    simplify_data_schema,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -373,12 +377,33 @@ def validate_bindings(spec_template, bindings, schema):
     return errors
 
 
-def _load_generated_tools():
-    """Load generated tool data. Returns (tool_defs, tool_dispatch, templates, schema) or None."""
-    try:
-        from udiagent.generated_vis_tools import TOOL_DEFS, TOOL_DISPATCH, TEMPLATES, SCHEMA
+def _request_schema_for_vis(data_schema):
+    """Parse the request-provided data schema into the shape validate_bindings expects.
 
-        return TOOL_DEFS, TOOL_DISPATCH, TEMPLATES, SCHEMA
+    Accepts a JSON string (as the server delivers) or an already-parsed dict
+    and returns ``{"entities": {...}, "relationships": [...]}``.
+    """
+    if isinstance(data_schema, str):
+        try:
+            raw = json.loads(data_schema)
+        except (json.JSONDecodeError, TypeError):
+            return {"entities": {}, "relationships": []}
+    else:
+        raw = data_schema or {}
+    return parse_schema_from_dict(raw)
+
+
+def _load_generated_tools():
+    """Load schema-agnostic tool templates. Returns (tool_defs, tool_dispatch, templates) or None.
+
+    The returned artifacts use ``<E>``/``<F>`` placeholders and are not tied
+    to any specific dataset — the schema used for validation is derived from
+    the request-provided ``data_schema`` at call time (see ``_execute_generate``).
+    """
+    try:
+        from udiagent.generated_vis_tools import TOOL_DEFS, TOOL_DISPATCH, TEMPLATES
+
+        return TOOL_DEFS, TOOL_DISPATCH, TEMPLATES
     except ImportError:
         return None
 
@@ -394,7 +419,8 @@ def _execute_generate(skill, context):
     # --- Primary path: function-calling with generated tools ---
     generated = _load_generated_tools()
     if generated is not None:
-        tool_defs, tool_dispatch, templates, tool_schema = generated
+        tool_defs, tool_dispatch, templates = generated
+        tool_schema = _request_schema_for_vis(data_schema)
 
         system_msg = (
             "You are a data visualization assistant. The user wants a visualization "
