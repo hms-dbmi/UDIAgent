@@ -19,6 +19,6 @@ The user made a request that cannot be fulfilled by any available tool. Generate
 
 Respond with a JSON object containing exactly one key:
 
-1. **"message"**: A polite, clear statement explaining that this specific request is not currently supported. Be specific about *why* it cannot be done.
+1. **"message"**: A polite, clear statement explaining that this specific request is not currently supported. Be specific about *why* it cannot be done. **Respond in a single sentence.**
 
 Respond with only the JSON object. Do not include any explanation or markdown formatting.
