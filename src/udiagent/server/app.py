@@ -111,6 +111,7 @@ def yac_completions(
         messages=request.messages,
         data_schema=request.dataSchema,
         data_domains=request.dataDomains,
+        current_filters=request.currentFilters,
         openai_api_key=x_openai_key,
     )
     logger.info("orchestrator_choice: %s", result.orchestrator_choice)
@@ -128,6 +129,7 @@ def yac_benchmark(
         messages=request.messages,
         data_schema=request.dataSchema,
         data_domains=request.dataDomains,
+        current_filters=request.currentFilters,
         openai_api_key=x_openai_key,
     )
 

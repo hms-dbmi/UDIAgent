@@ -281,6 +281,35 @@ def check_filter_rubric(rubric, expected, output, data_domains):
         call for call in output_tool_calls if call["name"] == "FilterData"
     ][0]["arguments"]
 
+    expected_action = expected_filter_call_args.get("action", "add")
+    output_action = output_filter_call_args.get("action", "add")
+    update_rubric(
+        rubric, "filter_action", expected_action, output_action, "filter", 10
+    )
+
+    # Remove actions carry no filterType/values — stop here after checking
+    # entity and field, which are still required for remove.
+    if expected_action == "remove":
+        output_filter_entity = output_filter_call_args["entity"]
+        update_rubric(
+            rubric,
+            "filter_entity_correct",
+            expected_filter_call_args["entity"],
+            output_filter_entity,
+            "filter",
+            20,
+        )
+        output_filter_field = output_filter_call_args["field"]
+        update_rubric(
+            rubric,
+            "filter_field_correct",
+            expected_filter_call_args["field"],
+            output_filter_field,
+            "filter",
+            20,
+        )
+        return rubric
+
     # correct type of filter (point vs range): 40 points
     expected_filter_type = expected_filter_call_args["filter"]["filterType"]
     output_filter_type = output_filter_call_args["filter"]["filterType"]
