@@ -12,16 +12,22 @@ Run with::
 import json
 import logging
 import os
+from dataclasses import asdict
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
 from dotenv import load_dotenv
-from fastapi import FastAPI, Header, Depends
+from fastapi import FastAPI, Header, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from udiagent.agent import UDIAgent
-from udiagent.orchestrator import Orchestrator
+from udiagent.orchestrator import (
+    BudgetExceededError,
+    Orchestrator,
+    Usage,
+    build_rebuff_toolcall,
+)
 from udiagent.structured_functions import export_registry_json
 from udiagent.server.config import ServerConfig
 from udiagent.server.auth import make_verify_jwt
@@ -69,6 +75,39 @@ orchestrator = Orchestrator(
 # --- FastAPI app ---
 app = FastAPI()
 
+# Optional budget-check hook.  Downstream integrators should monkey-patch this
+# (``server_app.app.state.budget_check = my_fn``) to consult their quota store.
+# The callback receives the accumulated ``Usage`` and returns a non-empty
+# message string to refuse the request, or ``None`` to proceed.
+app.state.budget_check = None
+
+
+def _usage_headers(usage: Usage | None) -> dict[str, str]:
+    """Render a ``Usage`` as the ``X-Usage-*`` header bundle for metering."""
+    if usage is None:
+        usage = Usage()
+    return {
+        "X-Usage-Prompt-Tokens": str(usage.prompt_tokens),
+        "X-Usage-Completion-Tokens": str(usage.completion_tokens),
+        "X-Usage-Total-Tokens": str(usage.total_tokens),
+        "X-Usage-Model": agent.gpt_model_name,
+    }
+
+
+@app.exception_handler(BudgetExceededError)
+async def _budget_exceeded_handler(request, exc: BudgetExceededError):
+    """Convert quota refusals into a normal Rebuff tool_call response.
+
+    HTTP 200 (not 402/429) is deliberate: the frontend renders the payload
+    through the same ``RebuffNotice`` component as any other orchestrator
+    rebuff, so users see a graceful message instead of an error toast.
+    """
+    return JSONResponse(
+        status_code=200,
+        content=[build_rebuff_toolcall(exc.message)],
+        headers=_usage_headers(exc.usage),
+    )
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -107,15 +146,23 @@ def yac_completions(
 ):
     logger.info("Received /v1/yac/completions request: %s", request)
 
+    # Only enforce budget for users who don't bring their own key.
+    budget_check = None if x_openai_key else app.state.budget_check
+
     result = orchestrator.run(
         messages=request.messages,
         data_schema=request.dataSchema,
         data_domains=request.dataDomains,
         openai_api_key=x_openai_key,
+        budget_check=budget_check,
     )
     logger.info("orchestrator_choice: %s", result.orchestrator_choice)
+    logger.info("usage: %s", result.usage)
     logger.info("tool_calls: %s", result.tool_calls)
-    return result.tool_calls
+    return JSONResponse(
+        content=result.tool_calls,
+        headers=_usage_headers(result.usage),
+    )
 
 
 @app.post("/v1/yac/benchmark")
@@ -134,6 +181,7 @@ def yac_benchmark(
     return {
         "tool_calls": result.tool_calls,
         "orchestrator_choice": result.orchestrator_choice,
+        "usage": asdict(result.usage),
     }
 
 

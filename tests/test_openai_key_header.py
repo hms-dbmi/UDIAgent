@@ -4,6 +4,7 @@ from unittest.mock import patch, MagicMock
 import pytest
 
 from udiagent.agent import UDIAgent, _make_openai_client
+from udiagent.orchestrator import Usage
 
 
 # ---------------------------------------------------------------------------
@@ -93,7 +94,8 @@ class TestApiHeaderExtraction:
             self.server_app.orchestrator,
             "run",
             return_value=MagicMock(
-                tool_calls=[{"name": "RenderVisualization", "arguments": {"spec": {}}}]
+                tool_calls=[{"name": "RenderVisualization", "arguments": {"spec": {}}}],
+                usage=Usage(),
             ),
         ) as mock_run:
             self.client.post(
@@ -112,7 +114,7 @@ class TestApiHeaderExtraction:
         with patch.object(
             self.server_app.orchestrator,
             "run",
-            return_value=MagicMock(tool_calls=[]),
+            return_value=MagicMock(tool_calls=[], usage=Usage()),
         ) as mock_run:
             self.client.post(
                 "/v1/yac/completions",
