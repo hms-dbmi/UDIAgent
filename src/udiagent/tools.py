@@ -46,15 +46,27 @@ ORCHESTRATOR_TOOLS = [
         "function": {
             "name": "ClarifyVariable",
             "description": (
-                "Use this tool when the user's request references an ambiguous variable "
-                "that could match multiple fields or entities in the dataset. For example, "
-                "'age' might match 'age_value' in donors or 'sample_age' in samples. "
-                "Returns a clarification request with candidate variables for the user "
-                "to choose from."
+                "Use this tool when the user's request is ambiguous and needs "
+                "clarification before a visualization or filter can be produced. "
+                "Set clarification_type to 'variable' when the ambiguity is about "
+                "which schema field the user means (e.g., 'age' might match "
+                "'age_value' in donors or 'sample_age' in samples). Set it to "
+                "'general' for other clarifications, such as asking which chart "
+                "type the user wants. Candidates for 'variable' clarifications "
+                "must reference actual schema (entity, field_name) pairs and "
+                "will be validated; 'general' candidates are free-form labels."
             ),
             "parameters": {
                 "type": "object",
                 "properties": {
+                    "clarification_type": {
+                        "type": "string",
+                        "enum": ["variable", "general"],
+                        "description": (
+                            "'variable' when asking which schema field the user meant; "
+                            "'general' for any other clarification (e.g. chart type)."
+                        ),
+                    },
                     "message": {
                         "type": "string",
                         "description": "A natural-language explanation of what is ambiguous and why clarification is needed.",
@@ -75,26 +87,32 @@ ORCHESTRATOR_TOOLS = [
                                         "properties": {
                                             "field_name": {
                                                 "type": "string",
-                                                "description": "The actual field name in the schema.",
+                                                "description": (
+                                                    "For 'variable' clarifications: the bare field name in the schema (e.g. 'sex', not 'donor.sex'). "
+                                                    "For 'general' clarifications: a free-form option label (e.g. 'bar chart')."
+                                                ),
                                             },
                                             "entity": {
                                                 "type": "string",
-                                                "description": "The dataset entity this field belongs to.",
+                                                "description": (
+                                                    "For 'variable' clarifications: the dataset entity this field belongs to. "
+                                                    "For 'general' clarifications: may be an empty string."
+                                                ),
                                             },
                                         },
                                         "required": ["field_name", "entity"],
                                         "additionalProperties": False,
                                     },
-                                    "description": "Candidate fields that could match the ambiguous term.",
+                                    "description": "Candidate options for the ambiguous term.",
                                 },
                             },
                             "required": ["query_term", "candidates"],
                             "additionalProperties": False,
                         },
-                        "description": "List of ambiguous variables with their candidate matches.",
+                        "description": "List of ambiguous terms with their candidate matches.",
                     },
                 },
-                "required": ["message", "ambiguous_variables"],
+                "required": ["clarification_type", "message", "ambiguous_variables"],
                 "additionalProperties": False,
             },
         },
