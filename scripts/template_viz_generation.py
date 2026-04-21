@@ -1294,7 +1294,7 @@ def generate():
             .mark("rect")
             .x(field="start", type="quantitative", title="<F>")
             .x2(field="end", type="quantitative")
-            .y(field="count", type="quantitative")
+            .y(field="count", type="quantitative", domainWhenFiltered="filtered")
         ),
         chart_type=ChartType.HISTOGRAM,
         task_types=[
