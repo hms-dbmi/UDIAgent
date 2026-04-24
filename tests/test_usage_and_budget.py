@@ -105,6 +105,33 @@ class TestUsage:
 
 
 # ---------------------------------------------------------------------------
+# build_rebuff_toolcall
+# ---------------------------------------------------------------------------
+
+
+class TestBuildRebuffToolcall:
+    def test_default_omits_reason_key(self):
+        """Ordinary rebuffs should not emit ``reason`` at all (not even as
+        ``None``) so existing consumers keep seeing an unchanged payload."""
+        tc = build_rebuff_toolcall("no can do")
+        assert tc == {
+            "name": "Rebuff",
+            "arguments": {"message": "no can do", "suggestions": []},
+        }
+        assert "reason" not in tc["arguments"]
+
+    def test_reason_kwarg_included(self):
+        tc = build_rebuff_toolcall("out of quota", reason="budget_exceeded")
+        assert tc["arguments"]["reason"] == "budget_exceeded"
+        assert tc["arguments"]["message"] == "out of quota"
+
+    def test_reason_is_keyword_only(self):
+        """Defensive — positional use would silently land in ``suggestions``."""
+        with pytest.raises(TypeError):
+            build_rebuff_toolcall("msg", None, "budget_exceeded")  # type: ignore[misc]
+
+
+# ---------------------------------------------------------------------------
 # Budget check — short-circuit paths
 # ---------------------------------------------------------------------------
 
@@ -325,7 +352,9 @@ class TestServerUsage:
         assert mock_run.call_args.kwargs.get("budget_check") is None
 
     def test_budget_exceeded_handler_returns_rebuff(self):
-        """A raised BudgetExceededError is mapped to HTTP 200 + Rebuff body."""
+        """A raised BudgetExceededError is mapped to HTTP 200 + Rebuff body
+        tagged with ``reason="budget_exceeded"`` so the frontend can prompt
+        the user for their own API key."""
         err_usage = Usage(prompt_tokens=5, completion_tokens=0, total_tokens=5)
         self.server_app.app.state.budget_check = None
 
@@ -341,7 +370,10 @@ class TestServerUsage:
             )
 
         assert resp.status_code == 200
-        assert resp.json() == [build_rebuff_toolcall("Out of tokens.")]
+        assert resp.json() == [
+            build_rebuff_toolcall("Out of tokens.", reason="budget_exceeded")
+        ]
+        assert resp.json()[0]["arguments"]["reason"] == "budget_exceeded"
         assert resp.headers["X-Usage-Total-Tokens"] == "5"
 
     def test_benchmark_includes_usage_in_body(self):

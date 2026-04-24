@@ -98,19 +98,31 @@ def _call_with_budget_guard(fn, usage: "Usage", /, *args, **kwargs):
 
 
 def build_rebuff_toolcall(
-    message: str, suggestions: list[str] | None = None
+    message: str,
+    suggestions: list[str] | None = None,
+    *,
+    reason: str | None = None,
 ) -> dict:
     """Build a Rebuff tool_call dict without invoking an LLM.
 
     Matches the shape produced by ``Orchestrator._handle_rebuff`` so it can be
     returned directly alongside (or in place of) normal tool_calls.
+
+    ``reason`` is an optional machine-readable discriminator (currently only
+    ``"budget_exceeded"``) that lets the frontend distinguish a quota refusal
+    from an ordinary rebuff and prompt the user for their own API key. The
+    key is omitted entirely when ``reason`` is ``None`` so existing rebuffs
+    keep their original payload shape.
     """
+    arguments: dict = {
+        "message": message,
+        "suggestions": list(suggestions) if suggestions else [],
+    }
+    if reason is not None:
+        arguments["reason"] = reason
     return {
         "name": "Rebuff",
-        "arguments": {
-            "message": message,
-            "suggestions": list(suggestions) if suggestions else [],
-        },
+        "arguments": arguments,
     }
 
 

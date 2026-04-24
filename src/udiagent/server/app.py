@@ -104,7 +104,7 @@ async def _budget_exceeded_handler(request, exc: BudgetExceededError):
     """
     return JSONResponse(
         status_code=200,
-        content=[build_rebuff_toolcall(exc.message)],
+        content=[build_rebuff_toolcall(exc.message, reason="budget_exceeded")],
         headers=_usage_headers(exc.usage),
     )
 
