@@ -92,4 +92,4 @@ class UDIAgent:
         )
 
         outputs = [json.loads(choice.message.content) for choice in resp.choices]
-        return outputs
+        return outputs, getattr(resp, "usage", None)

@@ -1,7 +1,13 @@
 """UDIAgent — LLM-powered data visualization orchestration library."""
 
 from udiagent.agent import UDIAgent
-from udiagent.orchestrator import Orchestrator, OrchestratorResult
+from udiagent.orchestrator import (
+    Orchestrator,
+    OrchestratorResult,
+    Usage,
+    BudgetExceededError,
+    build_rebuff_toolcall,
+)
 from udiagent.skills import Skill, load_skills, render_template
 from udiagent.grammar import load_grammar
 from udiagent.vis_generate import generate_vis_spec
@@ -23,6 +29,9 @@ __all__ = [
     "UDIAgent",
     "Orchestrator",
     "OrchestratorResult",
+    "Usage",
+    "BudgetExceededError",
+    "build_rebuff_toolcall",
     "Skill",
     "load_grammar",
     "load_skills",

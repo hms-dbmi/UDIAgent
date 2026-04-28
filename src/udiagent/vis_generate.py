@@ -89,11 +89,21 @@ def _load_examples(
 # ---------------------------------------------------------------------------
 
 
-def _call_llm_with_tools(agent, messages, tools, config, openai_api_key=None):
-    """Call the LLM with function-calling tools. Returns (tool_name, arguments) or None."""
+def _call_llm_with_tools(
+    agent, messages, tools, config, usage=None, openai_api_key=None
+):
+    """Call the LLM with function-calling tools. Returns (tool_name, arguments) or None.
+
+    Quota / rate-limit errors are re-raised as ``BudgetExceededError`` so callers
+    can short-circuit; other errors swallow to None to preserve the fallback path.
+    """
+    from udiagent.orchestrator import _call_with_budget_guard, BudgetExceededError
+
     try:
         client = agent._get_gpt_client(openai_api_key)
-        resp = client.chat.completions.create(
+        resp = _call_with_budget_guard(
+            client.chat.completions.create,
+            usage,
             model=agent.gpt_model_name,
             messages=messages,
             tools=tools,
@@ -101,23 +111,41 @@ def _call_llm_with_tools(agent, messages, tools, config, openai_api_key=None):
             temperature=0.0,
             max_completion_tokens=1024,
         )
+        if usage is not None:
+            usage.add("create_visualization", getattr(resp, "usage", None))
         choice = resp.choices[0]
         if choice.message.tool_calls:
             tc = choice.message.tool_calls[0]
             return tc.function.name, json.loads(tc.function.arguments)
+    except BudgetExceededError:
+        raise
     except Exception:
         pass
     return None
 
 
-def _call_llm(agent, messages, grammar, config, openai_api_key=None):
+def _call_llm(
+    agent,
+    messages,
+    grammar,
+    config,
+    usage=None,
+    openai_api_key=None,
+    op="create_visualization",
+):
     """Call the LLM and return the raw spec string."""
-    results = agent.gpt_completions_guided_json(
+    from udiagent.orchestrator import _call_with_budget_guard
+
+    results, resp_usage = _call_with_budget_guard(
+        agent.gpt_completions_guided_json,
+        usage,
         messages=messages,
         json_schema=grammar["schema_string"],
         n=config.get("n", 1),
         openai_api_key=openai_api_key,
     )
+    if usage is not None:
+        usage.add(op, resp_usage)
     if results:
         result = results[0]
         if "arguments" in result and "spec" in result["arguments"]:
@@ -407,7 +435,11 @@ def _execute_generate(skill, context):
         )
 
         openai_api_key = context.get("openai_api_key")
-        result = _call_llm_with_tools(agent, tool_messages, tool_defs, config, openai_api_key=openai_api_key)
+        usage = context.get("usage")
+        result = _call_llm_with_tools(
+            agent, tool_messages, tool_defs, config,
+            usage=usage, openai_api_key=openai_api_key,
+        )
         for _attempt in range(2):
             if result is None:
                 break
@@ -439,7 +471,8 @@ def _execute_generate(skill, context):
                         },
                     ]
                     result = _call_llm_with_tools(
-                        agent, retry_messages, tool_defs, config, openai_api_key=openai_api_key
+                        agent, retry_messages, tool_defs, config,
+                        usage=usage, openai_api_key=openai_api_key,
                     )
                     continue
                 else:
@@ -473,7 +506,12 @@ def _execute_generate(skill, context):
 
     gen_messages = [{"role": "system", "content": rendered}] + list(context["messages"])
 
-    spec_str = _call_llm(agent, gen_messages, grammar, config, openai_api_key=context.get("openai_api_key"))
+    spec_str = _call_llm(
+        agent, gen_messages, grammar, config,
+        usage=context.get("usage"),
+        openai_api_key=context.get("openai_api_key"),
+        op="create_visualization",
+    )
     context["spec_str"] = spec_str
     context["gen_messages"] = gen_messages
     context["tool_used"] = None
@@ -514,7 +552,12 @@ def _execute_validate(skill, context):
         gen_messages.append({"role": "assistant", "content": feedback_content})
         gen_messages.append({"role": "user", "content": rendered})
 
-        spec_str = _call_llm(agent, gen_messages, grammar, config, openai_api_key=context.get("openai_api_key"))
+        spec_str = _call_llm(
+            agent, gen_messages, grammar, config,
+            usage=context.get("usage"),
+            openai_api_key=context.get("openai_api_key"),
+            op="create_visualization.validate",
+        )
         spec_dict, errors = _parse_and_validate(spec_str, grammar["schema_dict"])
         corrections += 1
 
@@ -553,7 +596,9 @@ def run_skills(plan, context, registry):
                 messages,
                 context["grammar"],
                 context["config"],
+                usage=context.get("usage"),
                 openai_api_key=context.get("openai_api_key"),
+                op=f"create_visualization.{skill_name}",
             )
             context["spec_str"] = spec_str
 
@@ -565,7 +610,9 @@ def run_skills(plan, context, registry):
 # ---------------------------------------------------------------------------
 
 
-def generate_vis_spec(agent, messages, data_schema, grammar, config=None, openai_api_key=None):
+def generate_vis_spec(
+    agent, messages, data_schema, grammar, config=None, usage=None, openai_api_key=None
+):
     """Generate a visualization spec using the skills pipeline.
 
     Args:
@@ -596,6 +643,7 @@ def generate_vis_spec(agent, messages, data_schema, grammar, config=None, openai
         "errors": [],
         "corrections": 0,
         "openai_api_key": openai_api_key,
+        "usage": usage,
     }
 
     plan = ["generate", "validate"]
