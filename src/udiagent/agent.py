@@ -8,24 +8,45 @@ from udiagent._compat import get_openai_class
 
 logger = logging.getLogger(__name__)
 
-_OpenAI = get_openai_class()
-
 
 @lru_cache(maxsize=128)
-def _make_openai_client(api_key: str):
+def _make_openai_client(api_key: str, openai_class):
     """Cached OpenAI client factory — preserves httpx connection pooling across requests."""
-    return _OpenAI(api_key=api_key)
+    return openai_class(api_key=api_key)
 
 
 class UDIAgent:
-    """UDIAgent for requesting UDI grammar via OpenAI."""
+    """UDIAgent for requesting UDI grammar via OpenAI.
+
+    LangFuse observability is opt-in: pass any of ``langfuse_public_key``,
+    ``langfuse_secret_key``, or ``langfuse_host`` to route requests through
+    ``langfuse.openai.OpenAI``. When none are provided, the plain ``openai``
+    client is used and no traces are emitted (even if the ``langfuse``
+    package is installed).
+    """
 
     def __init__(
         self,
         gpt_model_name: str,
         openai_api_key: str | None = None,
+        *,
+        langfuse_public_key: str | None = None,
+        langfuse_secret_key: str | None = None,
+        langfuse_host: str | None = None,
     ):
         self.gpt_model_name = gpt_model_name
+        use_langfuse = any(
+            [langfuse_public_key, langfuse_secret_key, langfuse_host]
+        )
+        if use_langfuse:
+            from langfuse import Langfuse
+
+            Langfuse(
+                public_key=langfuse_public_key,
+                secret_key=langfuse_secret_key,
+                host=langfuse_host,
+            )
+        self._openai_class = get_openai_class(use_langfuse=use_langfuse)
         self._init_server_model_connection(openai_api_key)
 
     def _init_server_model_connection(self, openai_api_key: str | None = None):
@@ -42,12 +63,12 @@ class UDIAgent:
             logger.info(
                 "OpenAI API key provided; GPT-based features will use this key by default."
             )
-            self.gpt_model = _OpenAI(api_key=openai_api_key)
+            self.gpt_model = self._openai_class(api_key=openai_api_key)
 
     def _get_gpt_client(self, openai_api_key: str | None = None):
         """Return a per-request OpenAI client if a custom key is provided, otherwise the default."""
         if openai_api_key:
-            return _make_openai_client(openai_api_key)
+            return _make_openai_client(openai_api_key, self._openai_class)
         if self.gpt_model is None:
             raise RuntimeError(
                 "No OpenAI API key available. Provide openai_api_key to UDIAgent() "
