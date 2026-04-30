@@ -12,18 +12,31 @@ from udiagent.orchestrator import Usage
 # ---------------------------------------------------------------------------
 
 
+class _StubOpenAI:
+    def __init__(self, **kwargs):
+        self._init_kwargs = kwargs
+
+
 class TestMakeOpenaiClientCache:
     def setup_method(self):
         _make_openai_client.cache_clear()
 
     def test_same_key_returns_cached_client(self):
-        client_a = _make_openai_client("sk-test-key-1")
-        client_b = _make_openai_client("sk-test-key-1")
+        client_a = _make_openai_client("sk-test-key-1", _StubOpenAI)
+        client_b = _make_openai_client("sk-test-key-1", _StubOpenAI)
         assert client_a is client_b
 
     def test_different_keys_return_different_clients(self):
-        client_a = _make_openai_client("sk-test-key-1")
-        client_b = _make_openai_client("sk-test-key-2")
+        client_a = _make_openai_client("sk-test-key-1", _StubOpenAI)
+        client_b = _make_openai_client("sk-test-key-2", _StubOpenAI)
+        assert client_a is not client_b
+
+    def test_different_classes_return_different_clients(self):
+        class _OtherOpenAI(_StubOpenAI):
+            pass
+
+        client_a = _make_openai_client("sk-test-key-1", _StubOpenAI)
+        client_b = _make_openai_client("sk-test-key-1", _OtherOpenAI)
         assert client_a is not client_b
 
 
@@ -41,6 +54,7 @@ class TestGetGptClient:
         agent = UDIAgent.__new__(UDIAgent)
         agent.gpt_model = MagicMock(name="default_gpt_model")
         agent.gpt_model_name = "gpt-4.1"
+        agent._openai_class = _StubOpenAI
         return agent
 
     def test_none_key_returns_default_client(self):

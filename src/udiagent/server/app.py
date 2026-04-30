@@ -66,6 +66,9 @@ config = ServerConfig.from_env()
 agent = UDIAgent(
     gpt_model_name=config.gpt_model_name,
     openai_api_key=config.openai_api_key,
+    langfuse_public_key=config.langfuse_public_key,
+    langfuse_secret_key=config.langfuse_secret_key,
+    langfuse_host=config.langfuse_host,
 )
 
 orchestrator = Orchestrator(

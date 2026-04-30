@@ -54,6 +54,22 @@ result = orch.run(
 # result.orchestrator_choice — "render-visualization", "both", "explain", etc.
 ```
 
+### With LangFuse observability
+
+LangFuse tracing is opt-in. Install the extra (`pip install udiagent[langfuse]`) and pass any of the three credentials to `UDIAgent`:
+
+```python
+agent = UDIAgent(
+    gpt_model_name="gpt-5.4",
+    openai_api_key="sk-...",
+    langfuse_public_key="pk-lf-...",
+    langfuse_secret_key="sk-lf-...",
+    langfuse_host="https://cloud.langfuse.com",  # or your self-hosted URL
+)
+```
+
+Installing `udiagent[langfuse]` alone does **not** enable tracing — credentials must be supplied explicitly. Library consumers who prefer environment-variable configuration should read the env vars themselves and pass the values to the constructor.
+
 ### Key Classes
 
 | Class                | Description                                                                            |
@@ -96,9 +112,9 @@ uv run fastapi run src/udiagent/server/app.py --port 8007
 | `JWT_SECRET_KEY`      | Yes\*    | —         | JWT signing key (\*not required if `INSECURE_DEV_MODE=1`)                           |
 | `JWT_ALGORITHM`       | No       | `HS256`   | JWT algorithm                                                                       |
 | `INSECURE_DEV_MODE`   | No       | `0`       | Set to `1` to skip JWT verification (development only)                              |
-| `LANGFUSE_SECRET_KEY` | No       | —         | LangFuse observability secret key                                                   |
-| `LANGFUSE_PUBLIC_KEY` | No       | —         | LangFuse observability public key                                                   |
-| `LANGFUSE_BASE_URL`   | No       | —         | LangFuse instance URL                                                               |
+| `LANGFUSE_SECRET_KEY` | No       | —         | LangFuse observability secret key (opt-in; tracing is disabled when unset)          |
+| `LANGFUSE_PUBLIC_KEY` | No       | —         | LangFuse observability public key (opt-in; tracing is disabled when unset)          |
+| `LANGFUSE_HOST`       | No       | —         | LangFuse instance URL (e.g. `https://cloud.langfuse.com`)                           |
 
 ### Server Endpoints
 
