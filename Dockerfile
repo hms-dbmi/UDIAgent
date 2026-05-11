@@ -11,6 +11,7 @@ RUN uv sync --frozen --no-install-project --extra server --extra langfuse
 # Copy application code and data
 COPY src/ ./src/
 COPY data/ ./data/
+COPY README.md ./
 
 # Install the project itself
 RUN uv sync --frozen --extra server --extra langfuse
