@@ -168,6 +168,7 @@ class Orchestrator:
         data_domains: str,
         openai_api_key: str | None = None,
         budget_check: Callable[["Usage"], str | None] | None = None,
+        session_id: str | None = None,
     ) -> OrchestratorResult:
         """Run the orchestrator on a user request.
 
@@ -181,10 +182,30 @@ class Orchestrator:
                 a Rebuff tool_call carrying that message; return ``None`` to
                 proceed. Invoked pre-flight and again after the top-level
                 orchestration completion.
+            session_id: Optional per-conversation ID used to group this run's
+                LLM calls into a single LangFuse trace/session. No-op when
+                LangFuse is disabled.
 
         Returns:
             An ``OrchestratorResult`` with tool_calls, orchestrator_choice, and usage.
         """
+        with self.agent.trace(session_id=session_id):
+            return self._run(
+                messages,
+                data_schema,
+                data_domains,
+                openai_api_key=openai_api_key,
+                budget_check=budget_check,
+            )
+
+    def _run(
+        self,
+        messages: list[dict],
+        data_schema: str,
+        data_domains: str,
+        openai_api_key: str | None = None,
+        budget_check: Callable[["Usage"], str | None] | None = None,
+    ) -> OrchestratorResult:
         usage = Usage()
 
         if budget_check is not None:

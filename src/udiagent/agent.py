@@ -2,6 +2,7 @@
 
 import json
 import logging
+from contextlib import contextmanager
 from functools import lru_cache
 
 from udiagent._compat import get_openai_class
@@ -38,16 +39,36 @@ class UDIAgent:
         use_langfuse = any(
             [langfuse_public_key, langfuse_secret_key, langfuse_host]
         )
+        self._langfuse_client = None
         if use_langfuse:
             from langfuse import Langfuse
 
-            Langfuse(
+            self._langfuse_client = Langfuse(
                 public_key=langfuse_public_key,
                 secret_key=langfuse_secret_key,
                 host=langfuse_host,
             )
         self._openai_class = get_openai_class(use_langfuse=use_langfuse)
         self._init_server_model_connection(openai_api_key)
+
+    @contextmanager
+    def trace(self, *, session_id: str | None = None, name: str = "orchestrator-run"):
+        """Group every OpenAI call made within this block under one trace.
+
+        When LangFuse is enabled, opens an enclosing span so the ``langfuse.openai``
+        integration nests all generations (orchestration, vis generation, etc.) of
+        a single turn into one trace instead of emitting a separate trace per call.
+        ``session_id`` (the frontend's per-conversation ID) groups successive turns
+        into one LangFuse session. When LangFuse is disabled this is a no-op.
+        """
+        client = getattr(self, "_langfuse_client", None)
+        if client is None:
+            yield
+            return
+        with client.start_as_current_span(name=name) as span:
+            if session_id:
+                span.update_trace(session_id=session_id)
+            yield
 
     def _init_server_model_connection(self, openai_api_key: str | None = None):
         """Instantiate the OpenAI client for GPT-based features.

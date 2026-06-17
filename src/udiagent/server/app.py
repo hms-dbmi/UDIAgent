@@ -146,8 +146,13 @@ def yac_completions(
     request: YACCompletionRequest,
     token_payload: dict = Depends(verify_jwt),
     x_openai_key: str | None = Header(None, alias="X-OpenAI-Key"),
+    x_conversation_id: str | None = Header(None, alias="X-Conversation-Id"),
 ):
-    logger.info("Received /v1/yac/completions request: %s", request)
+    logger.info(
+        "Received /v1/yac/completions request (conversation=%s): %s",
+        x_conversation_id,
+        request,
+    )
 
     # Only enforce budget for users who don't bring their own key.
     budget_check = None if x_openai_key else app.state.budget_check
@@ -158,6 +163,7 @@ def yac_completions(
         data_domains=request.dataDomains,
         openai_api_key=x_openai_key,
         budget_check=budget_check,
+        session_id=x_conversation_id,
     )
     logger.info("orchestrator_choice: %s", result.orchestrator_choice)
     logger.info("usage: %s", result.usage)
