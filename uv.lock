@@ -912,23 +912,21 @@ wheels = [
 
 [[package]]
 name = "langfuse"
-version = "3.14.5"
+version = "4.10.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "backoff" },
     { name = "httpx" },
-    { name = "openai" },
     { name = "opentelemetry-api" },
     { name = "opentelemetry-exporter-otlp-proto-http" },
     { name = "opentelemetry-sdk" },
     { name = "packaging" },
     { name = "pydantic" },
-    { name = "requests" },
     { name = "wrapt" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/ec/6b/7a945e8bc56cbf343b6f6171fd45870b0ea80ea38463b2db8dd5a9dc04a2/langfuse-3.14.5.tar.gz", hash = "sha256:2f543ec1540053d39b08a50ed5992caf1cd54d472a55cb8e5dcf6d4fcb7ff631", size = 235474, upload-time = "2026-02-23T10:42:47.721Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/ca/d8/442d3f874c1ae396db42332f09efb331edb5b50c59bf372803ef0aa1ecc1/langfuse-4.10.0.tar.gz", hash = "sha256:5e6c8f2aff218b8c75c2dc97e86b3d452cc1e936ac1533df2b7584c69d49ef58", size = 346374, upload-time = "2026-06-23T10:02:41.593Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/a3/a1/10f04224542d6a57073c4f339b6763836a0899c98966f1d4ffcf56d2cf61/langfuse-3.14.5-py3-none-any.whl", hash = "sha256:5054b1c705ec69bce2d7077ce7419727ac629159428da013790979ca9cae77d5", size = 421240, upload-time = "2026-02-23T10:42:46.085Z" },
+    { url = "https://files.pythonhosted.org/packages/78/4d/279f93ea5a5fbd9dd4519e5df169237bb8d2f2164fc76d19afae0d5aa95c/langfuse-4.10.0-py3-none-any.whl", hash = "sha256:3bb110df24755245721374ac622e286f2fcfab68f4a9df45d24dde5d6fee1a77", size = 607392, upload-time = "2026-06-23T10:02:40.136Z" },
 ]
 
 [[package]]
@@ -2110,7 +2108,7 @@ wheels = [
 
 [[package]]
 name = "udiagent"
-version = "0.2.4"
+version = "0.2.6"
 source = { editable = "." }
 dependencies = [
     { name = "jsonschema" },
@@ -2161,7 +2159,7 @@ requires-dist = [
     { name = "huggingface-hub", marker = "extra == 'benchmark'", specifier = ">=0.36.0" },
     { name = "ijson", marker = "extra == 'benchmark'", specifier = ">=3.4.0.post0" },
     { name = "jsonschema", specifier = ">=4.26.0" },
-    { name = "langfuse", marker = "extra == 'langfuse'", specifier = ">=3.14.3" },
+    { name = "langfuse", marker = "extra == 'langfuse'", specifier = ">=4" },
     { name = "openai", specifier = ">=2.15.0" },
     { name = "pandas", marker = "extra == 'codegen'", specifier = ">=2.0.0" },
     { name = "pytest", marker = "extra == 'test'", specifier = ">=8.0.0" },

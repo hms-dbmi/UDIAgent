@@ -2,7 +2,7 @@
 
 import json
 import logging
-from contextlib import contextmanager
+from contextlib import contextmanager, nullcontext
 from functools import lru_cache
 
 from udiagent._compat import get_openai_class
@@ -67,10 +67,15 @@ class UDIAgent:
         if client is None:
             yield
             return
-        with client.start_as_current_span(name=name) as span:
-            if session_id:
-                span.update_trace(session_id=session_id)
-            yield
+        from langfuse import propagate_attributes
+
+        with client.start_as_current_observation(name=name):
+            with (
+                propagate_attributes(session_id=session_id)
+                if session_id
+                else nullcontext()
+            ):
+                yield
 
     def _init_server_model_connection(self, openai_api_key: str | None = None):
         """Instantiate the OpenAI client for GPT-based features.

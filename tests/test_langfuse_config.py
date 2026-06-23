@@ -55,6 +55,7 @@ class TestUDIAgentLangfuseOptIn:
                 langfuse_public_key="pk-lf-test",
                 langfuse_secret_key="sk-lf-test",
                 langfuse_host="https://lf.example.com",
+                langfuse_environment="staging",
             )
 
         assert agent._openai_class is LangfuseOpenAI
@@ -62,6 +63,7 @@ class TestUDIAgentLangfuseOptIn:
             public_key="pk-lf-test",
             secret_key="sk-lf-test",
             host="https://lf.example.com",
+            environment="staging",
         )
 
     def test_partial_langfuse_kwargs_still_activate_path(self):
@@ -80,6 +82,7 @@ class TestUDIAgentLangfuseOptIn:
             public_key=None,
             secret_key=None,
             host="https://lf.example.com",
+            environment=None,
         )
 
 
