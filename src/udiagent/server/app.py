@@ -69,6 +69,7 @@ agent = UDIAgent(
     langfuse_public_key=config.langfuse_public_key,
     langfuse_secret_key=config.langfuse_secret_key,
     langfuse_host=config.langfuse_host,
+    langfuse_environment=config.langfuse_environment,
 )
 
 orchestrator = Orchestrator(

@@ -34,6 +34,7 @@ class UDIAgent:
         langfuse_public_key: str | None = None,
         langfuse_secret_key: str | None = None,
         langfuse_host: str | None = None,
+        langfuse_environment: str | None = None,
     ):
         self.gpt_model_name = gpt_model_name
         use_langfuse = any(
@@ -47,6 +48,7 @@ class UDIAgent:
                 public_key=langfuse_public_key,
                 secret_key=langfuse_secret_key,
                 host=langfuse_host,
+                environment=langfuse_environment,
             )
         self._openai_class = get_openai_class(use_langfuse=use_langfuse)
         self._init_server_model_connection(openai_api_key)

@@ -20,6 +20,7 @@ class ServerConfig:
     langfuse_public_key: str | None = None
     langfuse_secret_key: str | None = None
     langfuse_host: str | None = None
+    langfuse_environment: str | None = None
 
     @classmethod
     def from_env(cls) -> "ServerConfig":
@@ -33,4 +34,5 @@ class ServerConfig:
             langfuse_public_key=os.getenv("LANGFUSE_PUBLIC_KEY"),
             langfuse_secret_key=os.getenv("LANGFUSE_SECRET_KEY"),
             langfuse_host=os.getenv("LANGFUSE_HOST"),
+            langfuse_environment=os.getenv("LANGFUSE_ENVIRONMENT"),
         )

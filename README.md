@@ -65,8 +65,11 @@ agent = UDIAgent(
     langfuse_public_key="pk-lf-...",
     langfuse_secret_key="sk-lf-...",
     langfuse_host="https://cloud.langfuse.com",  # or your self-hosted URL
+    langfuse_environment="production",            # optional; tags traces (e.g. "staging")
 )
 ```
+
+Tracing turns on when **any** of `langfuse_public_key`, `langfuse_secret_key`, or `langfuse_host` is set. `langfuse_environment` is purely a tag — it labels traces in the LangFuse UI but does not by itself enable tracing.
 
 Installing `udiagent[langfuse]` alone does **not** enable tracing — credentials must be supplied explicitly. Library consumers who prefer environment-variable configuration should read the env vars themselves and pass the values to the constructor.
 
@@ -115,6 +118,7 @@ uv run fastapi run src/udiagent/server/app.py --port 8007
 | `LANGFUSE_SECRET_KEY` | No       | —         | LangFuse observability secret key (opt-in; tracing is disabled when unset)          |
 | `LANGFUSE_PUBLIC_KEY` | No       | —         | LangFuse observability public key (opt-in; tracing is disabled when unset)          |
 | `LANGFUSE_HOST`       | No       | —         | LangFuse instance URL (e.g. `https://cloud.langfuse.com`)                           |
+| `LANGFUSE_ENVIRONMENT`| No       | —         | Tags traces with an environment label (e.g. `production`); does not enable tracing  |
 
 ### Server Endpoints
 
