@@ -1,9 +1,9 @@
 """
-Regenerate template visualizations and typed tool definitions in one step.
+Regenerate template visualizations and typed (dataset-agnostic) tool
+definitions in one step.
 
 Usage:
     python scripts/regenerate_vis_tools.py
-    python scripts/regenerate_vis_tools.py --schema data/data_domains/hubmap_data_schema.json
 """
 
 import argparse
@@ -12,20 +12,13 @@ import sys
 from pathlib import Path
 
 _repo_root = Path(__file__).resolve().parent.parent
-_default_templates = _repo_root / "src" / "skills" / "template_visualizations.json"
-_default_schema = _repo_root / "data" / "data_domains" / "hubmap_data_schema.json"
-_default_tools_output = _repo_root / "src" / "generated_vis_tools.py"
+_default_templates = _repo_root / "src" / "udiagent" / "data" / "skills" / "template_visualizations.json"
+_default_tools_output = _repo_root / "src" / "udiagent" / "generated_vis_tools.py"
 
 
 def main():
     parser = argparse.ArgumentParser(
         description="Regenerate template visualizations and typed tool definitions.",
-    )
-    parser.add_argument(
-        "--schema",
-        type=str,
-        default=str(_default_schema),
-        help="Path to data schema JSON (default: data/data_domains/hubmap_data_schema.json)",
     )
     parser.add_argument(
         "--templates-output",
@@ -55,14 +48,13 @@ def main():
         print("ERROR: template_viz_generation.py failed", file=sys.stderr)
         sys.exit(1)
 
-    # Step 2: Generate typed tool definitions
+    # Step 2: Generate typed tool definitions (dataset-agnostic)
     print("\n=== Step 2: Generating typed tool definitions ===")
     result = subprocess.run(
         [
             sys.executable,
-            str(_repo_root / "src" / "generate_tools.py"),
+            "-m", "udiagent.generate_tools",
             "--templates", args.templates_output,
-            "--schema", args.schema,
             "--output", args.tools_output,
         ],
         cwd=str(_repo_root),
