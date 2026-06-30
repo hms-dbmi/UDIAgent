@@ -94,6 +94,8 @@ def _usage_headers(usage: Usage | None) -> dict[str, str]:
         "X-Usage-Prompt-Tokens": str(usage.prompt_tokens),
         "X-Usage-Completion-Tokens": str(usage.completion_tokens),
         "X-Usage-Total-Tokens": str(usage.total_tokens),
+        "X-Usage-Cached-Prompt-Tokens": str(usage.cached_prompt_tokens),
+        "X-Usage-Reasoning-Tokens": str(usage.reasoning_tokens),
         "X-Usage-Model": agent.gpt_model_name,
     }
 
@@ -118,6 +120,17 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    # Custom response headers must be allow-listed for cross-origin JS to read
+    # them; the frontend surfaces these as the per-session token counter.
+    # Must enumerate (not "*"), which is invalid alongside allow_credentials.
+    expose_headers=[
+        "X-Usage-Prompt-Tokens",
+        "X-Usage-Completion-Tokens",
+        "X-Usage-Total-Tokens",
+        "X-Usage-Cached-Prompt-Tokens",
+        "X-Usage-Reasoning-Tokens",
+        "X-Usage-Model",
+    ],
 )
 
 verify_jwt = make_verify_jwt(

@@ -37,6 +37,11 @@ class Usage:
     prompt_tokens: int = 0
     completion_tokens: int = 0
     total_tokens: int = 0
+    # Sub-counts broken out for cost visibility: cached input is billed at a
+    # discount; reasoning tokens are a subset of ``completion_tokens``. Both
+    # are 0 on providers/models that don't report them.
+    cached_prompt_tokens: int = 0
+    reasoning_tokens: int = 0
     operations: list[dict] = field(default_factory=list)
 
     def add(self, op: str, resp_usage) -> None:
@@ -48,15 +53,23 @@ class Usage:
         total = int(
             getattr(resp_usage, "total_tokens", 0) or (prompt + completion)
         )
+        p_details = getattr(resp_usage, "prompt_tokens_details", None)
+        cached = int(getattr(p_details, "cached_tokens", 0) or 0)
+        c_details = getattr(resp_usage, "completion_tokens_details", None)
+        reasoning = int(getattr(c_details, "reasoning_tokens", 0) or 0)
         self.prompt_tokens += prompt
         self.completion_tokens += completion
         self.total_tokens += total
+        self.cached_prompt_tokens += cached
+        self.reasoning_tokens += reasoning
         self.operations.append(
             {
                 "op": op,
                 "prompt_tokens": prompt,
                 "completion_tokens": completion,
                 "total_tokens": total,
+                "cached_prompt_tokens": cached,
+                "reasoning_tokens": reasoning,
             }
         )
 
