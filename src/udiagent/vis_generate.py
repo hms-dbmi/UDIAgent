@@ -20,6 +20,51 @@ from udiagent.schema import simplify_data_schema, simplify_data_domains
 
 
 # ---------------------------------------------------------------------------
+# Active template set (hard-coded developer switch)
+# ---------------------------------------------------------------------------
+#
+# YAC ships two template sets: the default "line_item" set (tidy per-record
+# tables) and a "cube" set (pre-aggregated powerset cubes, where re-aggregation
+# is wrong and per-record charts are impossible). To point the pipeline at a
+# different set, change ACTIVE_TEMPLATE_SET below and restart. This is
+# deliberately a single hard-coded value — there is no schema-based
+# auto-detection.
+#
+# Each entry names (a) the packaged few-shot examples JSON and (b) the generated
+# typed-tools module. After editing/regenerating a set, rebuild its tools with:
+#     python scripts/regenerate_vis_tools.py --template-set cube
+ACTIVE_TEMPLATE_SET = "line_item"
+
+_TEMPLATE_SETS = {
+    "line_item": {
+        "examples_file": "template_visualizations.json",
+        "tools_module": "udiagent.generated_vis_tools",
+    },
+    "cube": {
+        "examples_file": "template_visualizations_cube.json",
+        "tools_module": "udiagent.generated_vis_tools_cube",
+    },
+}
+
+
+def _active_template_set() -> dict:
+    """Return the config for the currently selected template set."""
+    if ACTIVE_TEMPLATE_SET not in _TEMPLATE_SETS:
+        raise ValueError(
+            f"Unknown ACTIVE_TEMPLATE_SET {ACTIVE_TEMPLATE_SET!r}; "
+            f"expected one of {sorted(_TEMPLATE_SETS)}"
+        )
+    return _TEMPLATE_SETS[ACTIVE_TEMPLATE_SET]
+
+
+def _default_examples_path() -> str:
+    """Packaged few-shot examples path for the active template set."""
+    return str(
+        _package_data_path() / "skills" / _active_template_set()["examples_file"]
+    )
+
+
+# ---------------------------------------------------------------------------
 # Few-shot example loading
 # ---------------------------------------------------------------------------
 
@@ -35,7 +80,7 @@ def _load_examples(
     Returns empty string if file doesn't exist or is empty.
     """
     if examples_path is None:
-        examples_path = str(_package_data_path() / "skills" / "template_visualizations.json")
+        examples_path = _default_examples_path()
 
     if examples_path in _examples_cache:
         return _examples_cache[examples_path]
@@ -402,12 +447,16 @@ def validate_bindings(spec_template, bindings, schema):
 
 
 def _load_generated_tools():
-    """Load generated tool data. Returns (tool_defs, tool_dispatch, templates, schema) or None."""
-    try:
-        from udiagent.generated_vis_tools import TOOL_DEFS, TOOL_DISPATCH, TEMPLATES, SCHEMA
+    """Load generated tool data for the active template set.
 
-        return TOOL_DEFS, TOOL_DISPATCH, TEMPLATES, SCHEMA
-    except ImportError:
+    Returns (tool_defs, tool_dispatch, templates, schema) or None.
+    """
+    import importlib
+
+    try:
+        module = importlib.import_module(_active_template_set()["tools_module"])
+        return module.TOOL_DEFS, module.TOOL_DISPATCH, module.TEMPLATES, module.SCHEMA
+    except (ImportError, AttributeError):
         return None
 
 
