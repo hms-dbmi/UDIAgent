@@ -1514,7 +1514,16 @@ def generate():
 
 
 if __name__ == "__main__":
+    import argparse
     import os
+
+    parser = argparse.ArgumentParser(description="Generate line-item visualization templates.")
+    parser.add_argument(
+        "-o", "--output",
+        default="./src/skills/template_visualizations.json",
+        help="Output template JSON path.",
+    )
+    args = parser.parse_args()
 
     os.makedirs("./out", exist_ok=True)
     df = generate()
@@ -1527,5 +1536,5 @@ if __name__ == "__main__":
     print(f"\nChart types: {df['chart_type'].value_counts().to_dict()}")
     print(f"Complexity: {df['chart_complexity'].value_counts().to_dict()}")
 
-    df.to_json("./src/skills/template_visualizations.json", orient="records", indent=2)
-    print(f"\nExported to ./src/skills/template_visualizations.json")
+    df.to_json(args.output, orient="records", indent=2)
+    print(f"\nExported to {args.output}")
