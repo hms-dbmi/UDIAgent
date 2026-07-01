@@ -1,0 +1,442 @@
+[
+  {
+    "query_templates": [
+      "How many encounters are there by encounter class?",
+      "Make a bar chart of encounter count by encounter class."
+    ],
+    "spec_template": "{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"filter\": \"d['period_start_month'] == null && d['class_display'] != null && d['age_at_visit'] == null && d['gender'] == null && d['race_display'] == null && d['ethnicity_display'] == null\"}], \"representation\": {\"mark\": \"bar\", \"mapping\": [{\"encoding\": \"y\", \"field\": \"class_display\", \"type\": \"nominal\"}, {\"encoding\": \"x\", \"field\": \"cnt\", \"type\": \"quantitative\"}]}}",
+    "creation_method": "template",
+    "chart_type": "barchart",
+    "chart_complexity": "simple",
+    "spec_key_count": 10,
+    "task_types": [
+      "Compute_Derived_Value",
+      "Determine_Range"
+    ],
+    "description": "Shows the pre-aggregated encounter count for each encounter class as a horizontal bar chart.",
+    "design_considerations": "Reads the cube's encounter class marginal by filtering to rows where class_display is present and all other dimensions are empty; the measure is mapped directly with no re-aggregation. Horizontal orientation chosen from category count.",
+    "tasks": "Compare counts across categories; identify the most or least common category."
+  },
+  {
+    "query_templates": [
+      "How many encounters are there by gender?",
+      "Make a bar chart of encounter count by gender."
+    ],
+    "spec_template": "{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"filter\": \"d['period_start_month'] == null && d['class_display'] == null && d['age_at_visit'] == null && d['gender'] != null && d['race_display'] == null && d['ethnicity_display'] == null\"}], \"representation\": {\"mark\": \"bar\", \"mapping\": [{\"encoding\": \"x\", \"field\": \"gender\", \"type\": \"nominal\"}, {\"encoding\": \"y\", \"field\": \"cnt\", \"type\": \"quantitative\"}]}}",
+    "creation_method": "template",
+    "chart_type": "barchart",
+    "chart_complexity": "simple",
+    "spec_key_count": 10,
+    "task_types": [
+      "Compute_Derived_Value",
+      "Determine_Range"
+    ],
+    "description": "Shows the pre-aggregated encounter count for each gender as a vertical bar chart.",
+    "design_considerations": "Reads the cube's gender marginal by filtering to rows where gender is present and all other dimensions are empty; the measure is mapped directly with no re-aggregation. Vertical orientation chosen from category count.",
+    "tasks": "Compare counts across categories; identify the most or least common category."
+  },
+  {
+    "query_templates": [
+      "How many encounters are there by race?",
+      "Make a bar chart of encounter count by race."
+    ],
+    "spec_template": "{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"filter\": \"d['period_start_month'] == null && d['class_display'] == null && d['age_at_visit'] == null && d['gender'] == null && d['race_display'] != null && d['ethnicity_display'] == null\"}], \"representation\": {\"mark\": \"bar\", \"mapping\": [{\"encoding\": \"y\", \"field\": \"race_display\", \"type\": \"nominal\"}, {\"encoding\": \"x\", \"field\": \"cnt\", \"type\": \"quantitative\"}]}}",
+    "creation_method": "template",
+    "chart_type": "barchart",
+    "chart_complexity": "simple",
+    "spec_key_count": 10,
+    "task_types": [
+      "Compute_Derived_Value",
+      "Determine_Range"
+    ],
+    "description": "Shows the pre-aggregated encounter count for each race as a horizontal bar chart.",
+    "design_considerations": "Reads the cube's race marginal by filtering to rows where race_display is present and all other dimensions are empty; the measure is mapped directly with no re-aggregation. Horizontal orientation chosen from category count.",
+    "tasks": "Compare counts across categories; identify the most or least common category."
+  },
+  {
+    "query_templates": [
+      "How many encounters are there by ethnicity?",
+      "Make a bar chart of encounter count by ethnicity."
+    ],
+    "spec_template": "{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"filter\": \"d['period_start_month'] == null && d['class_display'] == null && d['age_at_visit'] == null && d['gender'] == null && d['race_display'] == null && d['ethnicity_display'] != null\"}], \"representation\": {\"mark\": \"bar\", \"mapping\": [{\"encoding\": \"x\", \"field\": \"ethnicity_display\", \"type\": \"nominal\"}, {\"encoding\": \"y\", \"field\": \"cnt\", \"type\": \"quantitative\"}]}}",
+    "creation_method": "template",
+    "chart_type": "barchart",
+    "chart_complexity": "simple",
+    "spec_key_count": 10,
+    "task_types": [
+      "Compute_Derived_Value",
+      "Determine_Range"
+    ],
+    "description": "Shows the pre-aggregated encounter count for each ethnicity as a vertical bar chart.",
+    "design_considerations": "Reads the cube's ethnicity marginal by filtering to rows where ethnicity_display is present and all other dimensions are empty; the measure is mapped directly with no re-aggregation. Vertical orientation chosen from category count.",
+    "tasks": "Compare counts across categories; identify the most or least common category."
+  },
+  {
+    "query_templates": [
+      "How many encounters are there by age?",
+      "Make a bar chart of encounter count by age."
+    ],
+    "spec_template": "{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"filter\": \"d['period_start_month'] == null && d['class_display'] == null && d['age_at_visit'] != null && d['gender'] == null && d['race_display'] == null && d['ethnicity_display'] == null\"}], \"representation\": {\"mark\": \"bar\", \"mapping\": [{\"encoding\": \"x\", \"field\": \"age_at_visit\", \"type\": \"quantitative\"}, {\"encoding\": \"y\", \"field\": \"cnt\", \"type\": \"quantitative\"}]}}",
+    "creation_method": "template",
+    "chart_type": "barchart",
+    "chart_complexity": "simple",
+    "spec_key_count": 10,
+    "task_types": [
+      "Compute_Derived_Value",
+      "Determine_Range"
+    ],
+    "description": "Shows the pre-aggregated encounter count for each age as a vertical bar chart.",
+    "design_considerations": "Reads the cube's age marginal by filtering to rows where age_at_visit is present and all other dimensions are empty; the measure is mapped directly with no re-aggregation. Vertical orientation chosen from category count.",
+    "tasks": "Compare counts across categories; identify the most or least common category."
+  },
+  {
+    "query_templates": [
+      "How does the encounter count change over month?",
+      "Make a line chart of encounter count over month."
+    ],
+    "spec_template": "{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"filter\": \"d['period_start_month'] != null && d['class_display'] == null && d['age_at_visit'] == null && d['gender'] == null && d['race_display'] == null && d['ethnicity_display'] == null\"}, {\"orderby\": {\"field\": \"period_start_month\", \"order\": \"asc\"}}], \"representation\": {\"mark\": \"line\", \"mapping\": [{\"encoding\": \"x\", \"field\": \"period_start_month\", \"type\": \"ordinal\"}, {\"encoding\": \"y\", \"field\": \"cnt\", \"type\": \"quantitative\"}]}}",
+    "creation_method": "template",
+    "chart_type": "line",
+    "chart_complexity": "simple",
+    "spec_key_count": 12,
+    "task_types": [
+      "Characterize_Distribution",
+      "Determine_Range"
+    ],
+    "description": "Shows the pre-aggregated encounter count over month as a line chart.",
+    "design_considerations": "Filters to the month marginal (all other dimensions empty), orders the axis ascending, and maps the measure directly. The month is encoded as an ordered (ordinal) axis.",
+    "tasks": "Identify trends over time; spot peaks, troughs, and seasonality."
+  },
+  {
+    "query_templates": [
+      "Make a pie chart of encounter count by encounter class."
+    ],
+    "spec_template": "{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"filter\": \"d['period_start_month'] == null && d['class_display'] != null && d['age_at_visit'] == null && d['gender'] == null && d['race_display'] == null && d['ethnicity_display'] == null\"}], \"representation\": {\"mark\": \"arc\", \"mapping\": [{\"encoding\": \"theta\", \"field\": \"cnt\", \"type\": \"quantitative\"}, {\"encoding\": \"color\", \"field\": \"class_display\", \"type\": \"nominal\"}]}}",
+    "creation_method": "template",
+    "chart_type": "circular",
+    "chart_complexity": "simple",
+    "spec_key_count": 10,
+    "task_types": [
+      "Compute_Derived_Value",
+      "Determine_Range"
+    ],
+    "description": "Shows the proportional encounter count for each encounter class as a pie chart.",
+    "design_considerations": "Filters to the encounter class marginal and maps the measure to angle; the renderer normalizes each slice against the total. Suitable for few categories.",
+    "tasks": "Assess part-to-whole proportions; identify the dominant category."
+  },
+  {
+    "query_templates": [
+      "Make a donut chart of encounter count by encounter class."
+    ],
+    "spec_template": "{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"filter\": \"d['period_start_month'] == null && d['class_display'] != null && d['age_at_visit'] == null && d['gender'] == null && d['race_display'] == null && d['ethnicity_display'] == null\"}], \"representation\": {\"mark\": \"arc\", \"mapping\": [{\"encoding\": \"theta\", \"field\": \"cnt\", \"type\": \"quantitative\"}, {\"encoding\": \"color\", \"field\": \"class_display\", \"type\": \"nominal\"}, {\"encoding\": \"radius\", \"value\": 60}, {\"encoding\": \"radius2\", \"value\": 80}]}}",
+    "creation_method": "template",
+    "chart_type": "circular",
+    "chart_complexity": "medium",
+    "spec_key_count": 14,
+    "task_types": [
+      "Compute_Derived_Value",
+      "Determine_Range"
+    ],
+    "description": "Shows the proportional encounter count for each encounter class as a donut chart.",
+    "design_considerations": "Filters to the encounter class marginal and maps the measure to angle; the renderer normalizes each slice against the total. Suitable for few categories.",
+    "tasks": "Assess part-to-whole proportions; identify the dominant category."
+  },
+  {
+    "query_templates": [
+      "How many encounters are there by encounter class and gender?",
+      "Make a stacked bar chart of encounter class and gender."
+    ],
+    "spec_template": "{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"filter\": \"d['period_start_month'] == null && d['class_display'] != null && d['age_at_visit'] == null && d['gender'] != null && d['race_display'] == null && d['ethnicity_display'] == null\"}], \"representation\": {\"mark\": \"bar\", \"mapping\": [{\"encoding\": \"x\", \"field\": \"class_display\", \"type\": \"nominal\"}, {\"encoding\": \"y\", \"field\": \"cnt\", \"type\": \"quantitative\"}, {\"encoding\": \"color\", \"field\": \"gender\", \"type\": \"nominal\"}]}}",
+    "creation_method": "template",
+    "chart_type": "stacked_bar",
+    "chart_complexity": "medium",
+    "spec_key_count": 13,
+    "task_types": [
+      "Compute_Derived_Value"
+    ],
+    "description": "Shows the pre-aggregated encounter count by encounter class and gender as a vertical stacked bar chart.",
+    "design_considerations": "Filters to the two-dimension marginal (class_display and gender present, all other dimensions empty) and maps the measure directly. Color encodes the sub-group; prefer the field with fewer categories for color.",
+    "tasks": "Compare group compositions across categories; identify dominant sub-groups."
+  },
+  {
+    "query_templates": [
+      "What is the encounter count of gender for each encounter class?"
+    ],
+    "spec_template": "{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"filter\": \"d['period_start_month'] == null && d['class_display'] != null && d['age_at_visit'] == null && d['gender'] != null && d['race_display'] == null && d['ethnicity_display'] == null\"}], \"representation\": {\"mark\": \"bar\", \"mapping\": [{\"encoding\": \"x\", \"field\": \"class_display\", \"type\": \"nominal\"}, {\"encoding\": \"y\", \"field\": \"cnt\", \"type\": \"quantitative\"}, {\"encoding\": \"xOffset\", \"field\": \"gender\", \"type\": \"nominal\"}, {\"encoding\": \"color\", \"field\": \"gender\", \"type\": \"nominal\"}]}}",
+    "creation_method": "template",
+    "chart_type": "stacked_bar",
+    "chart_complexity": "medium",
+    "spec_key_count": 16,
+    "task_types": [
+      "Compute_Derived_Value"
+    ],
+    "description": "Shows the pre-aggregated encounter count by encounter class and gender as a grouped (side-by-side) bar chart.",
+    "design_considerations": "Filters to the two-dimension marginal and uses xOffset for side-by-side grouping, enabling direct comparison of gender within each encounter class.",
+    "tasks": "Directly compare sub-group counts within and across categories."
+  },
+  {
+    "query_templates": [
+      "What is the proportion of gender for each encounter class?"
+    ],
+    "spec_template": "{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"filter\": \"d['period_start_month'] == null && d['class_display'] != null && d['age_at_visit'] == null && d['gender'] != null && d['race_display'] == null && d['ethnicity_display'] == null\"}, {\"groupby\": \"class_display\", \"out\": \"groupTotals\"}, {\"rollup\": {\"axis_total\": {\"op\": \"sum\", \"field\": \"cnt\"}}}, {\"groupby\": [\"gender\", \"class_display\"], \"in\": \"<E>\"}, {\"rollup\": {\"cell_total\": {\"op\": \"sum\", \"field\": \"cnt\"}}}, {\"join\": {\"on\": \"class_display\"}, \"in\": [\"<E>\", \"groupTotals\"], \"out\": \"datasets\"}, {\"derive\": {\"proportion\": \"d['cell_total'] / d['axis_total']\"}}], \"representation\": {\"mark\": \"bar\", \"mapping\": [{\"encoding\": \"x\", \"field\": \"class_display\", \"type\": \"nominal\"}, {\"encoding\": \"y\", \"field\": \"proportion\", \"type\": \"quantitative\"}, {\"encoding\": \"color\", \"field\": \"gender\", \"type\": \"nominal\"}]}}",
+    "creation_method": "template",
+    "chart_type": "stacked_bar",
+    "chart_complexity": "complex",
+    "spec_key_count": 27,
+    "task_types": [
+      "Compute_Derived_Value"
+    ],
+    "description": "Shows the relative proportion of gender within each encounter class as a normalized stacked bar chart.",
+    "design_considerations": "First filters to the two-dimension marginal, then sums the measure per encounter class and divides each cell by its group total to obtain proportions. Color is preferably the field with fewer categories.",
+    "tasks": "Compare relative proportions across categories; identify dominant sub-groups."
+  },
+  {
+    "query_templates": [
+      "Are there clusters in encounter count across encounter class and gender?",
+      "Make a heatmap of encounter class and gender."
+    ],
+    "spec_template": "{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"filter\": \"d['period_start_month'] == null && d['class_display'] != null && d['age_at_visit'] == null && d['gender'] != null && d['race_display'] == null && d['ethnicity_display'] == null\"}, {\"derive\": {\"udi_internal_percentile\": \"d['cnt'] / max(d['cnt'])\"}}, {\"derive\": {\"udi_internal_text_color_threshold\": \"d.udi_internal_percentile > .5 ? 'large' : 'small'\"}}], \"representation\": [{\"mark\": \"rect\", \"mapping\": [{\"encoding\": \"color\", \"field\": \"cnt\", \"type\": \"quantitative\"}, {\"encoding\": \"y\", \"field\": \"gender\", \"type\": \"nominal\"}, {\"encoding\": \"x\", \"field\": \"class_display\", \"type\": \"nominal\"}]}, {\"mark\": \"text\", \"mapping\": [{\"encoding\": \"text\", \"field\": \"cnt\", \"type\": \"quantitative\"}, {\"encoding\": \"y\", \"field\": \"gender\", \"type\": \"nominal\"}, {\"encoding\": \"x\", \"field\": \"class_display\", \"type\": \"nominal\"}, {\"encoding\": \"color\", \"field\": \"udi_internal_text_color_threshold\", \"type\": \"nominal\", \"domain\": [\"large\", \"small\"], \"range\": [\"white\", \"black\"], \"omitLegend\": true}]}]}",
+    "creation_method": "template",
+    "chart_type": "heatmap",
+    "chart_complexity": "complex",
+    "spec_key_count": 33,
+    "task_types": [
+      "Cluster",
+      "Compute_Derived_Value",
+      "Correlate"
+    ],
+    "description": "Shows the pre-aggregated encounter count for each combination of encounter class and gender as a labeled heatmap.",
+    "design_considerations": "Filters to the two-dimension marginal and maps the measure to cell color; overlaid text shows exact values with contrast-aware color. The field with more categories is preferably on the y-axis.",
+    "tasks": "Identify clusters or patterns across two dimensions; compare counts across combinations."
+  },
+  {
+    "query_templates": [
+      "How many encounters are there by gender and race?",
+      "Make a stacked bar chart of gender and race."
+    ],
+    "spec_template": "{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"filter\": \"d['period_start_month'] == null && d['class_display'] == null && d['age_at_visit'] == null && d['gender'] != null && d['race_display'] != null && d['ethnicity_display'] == null\"}], \"representation\": {\"mark\": \"bar\", \"mapping\": [{\"encoding\": \"x\", \"field\": \"gender\", \"type\": \"nominal\"}, {\"encoding\": \"y\", \"field\": \"cnt\", \"type\": \"quantitative\"}, {\"encoding\": \"color\", \"field\": \"race_display\", \"type\": \"nominal\"}]}}",
+    "creation_method": "template",
+    "chart_type": "stacked_bar",
+    "chart_complexity": "medium",
+    "spec_key_count": 13,
+    "task_types": [
+      "Compute_Derived_Value"
+    ],
+    "description": "Shows the pre-aggregated encounter count by gender and race as a vertical stacked bar chart.",
+    "design_considerations": "Filters to the two-dimension marginal (gender and race_display present, all other dimensions empty) and maps the measure directly. Color encodes the sub-group; prefer the field with fewer categories for color.",
+    "tasks": "Compare group compositions across categories; identify dominant sub-groups."
+  },
+  {
+    "query_templates": [
+      "What is the encounter count of race for each gender?"
+    ],
+    "spec_template": "{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"filter\": \"d['period_start_month'] == null && d['class_display'] == null && d['age_at_visit'] == null && d['gender'] != null && d['race_display'] != null && d['ethnicity_display'] == null\"}], \"representation\": {\"mark\": \"bar\", \"mapping\": [{\"encoding\": \"x\", \"field\": \"gender\", \"type\": \"nominal\"}, {\"encoding\": \"y\", \"field\": \"cnt\", \"type\": \"quantitative\"}, {\"encoding\": \"xOffset\", \"field\": \"race_display\", \"type\": \"nominal\"}, {\"encoding\": \"color\", \"field\": \"race_display\", \"type\": \"nominal\"}]}}",
+    "creation_method": "template",
+    "chart_type": "stacked_bar",
+    "chart_complexity": "medium",
+    "spec_key_count": 16,
+    "task_types": [
+      "Compute_Derived_Value"
+    ],
+    "description": "Shows the pre-aggregated encounter count by gender and race as a grouped (side-by-side) bar chart.",
+    "design_considerations": "Filters to the two-dimension marginal and uses xOffset for side-by-side grouping, enabling direct comparison of race within each gender.",
+    "tasks": "Directly compare sub-group counts within and across categories."
+  },
+  {
+    "query_templates": [
+      "What is the proportion of race for each gender?"
+    ],
+    "spec_template": "{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"filter\": \"d['period_start_month'] == null && d['class_display'] == null && d['age_at_visit'] == null && d['gender'] != null && d['race_display'] != null && d['ethnicity_display'] == null\"}, {\"groupby\": \"gender\", \"out\": \"groupTotals\"}, {\"rollup\": {\"axis_total\": {\"op\": \"sum\", \"field\": \"cnt\"}}}, {\"groupby\": [\"race_display\", \"gender\"], \"in\": \"<E>\"}, {\"rollup\": {\"cell_total\": {\"op\": \"sum\", \"field\": \"cnt\"}}}, {\"join\": {\"on\": \"gender\"}, \"in\": [\"<E>\", \"groupTotals\"], \"out\": \"datasets\"}, {\"derive\": {\"proportion\": \"d['cell_total'] / d['axis_total']\"}}], \"representation\": {\"mark\": \"bar\", \"mapping\": [{\"encoding\": \"x\", \"field\": \"gender\", \"type\": \"nominal\"}, {\"encoding\": \"y\", \"field\": \"proportion\", \"type\": \"quantitative\"}, {\"encoding\": \"color\", \"field\": \"race_display\", \"type\": \"nominal\"}]}}",
+    "creation_method": "template",
+    "chart_type": "stacked_bar",
+    "chart_complexity": "complex",
+    "spec_key_count": 27,
+    "task_types": [
+      "Compute_Derived_Value"
+    ],
+    "description": "Shows the relative proportion of race within each gender as a normalized stacked bar chart.",
+    "design_considerations": "First filters to the two-dimension marginal, then sums the measure per gender and divides each cell by its group total to obtain proportions. Color is preferably the field with fewer categories.",
+    "tasks": "Compare relative proportions across categories; identify dominant sub-groups."
+  },
+  {
+    "query_templates": [
+      "Are there clusters in encounter count across gender and race?",
+      "Make a heatmap of gender and race."
+    ],
+    "spec_template": "{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"filter\": \"d['period_start_month'] == null && d['class_display'] == null && d['age_at_visit'] == null && d['gender'] != null && d['race_display'] != null && d['ethnicity_display'] == null\"}, {\"derive\": {\"udi_internal_percentile\": \"d['cnt'] / max(d['cnt'])\"}}, {\"derive\": {\"udi_internal_text_color_threshold\": \"d.udi_internal_percentile > .5 ? 'large' : 'small'\"}}], \"representation\": [{\"mark\": \"rect\", \"mapping\": [{\"encoding\": \"color\", \"field\": \"cnt\", \"type\": \"quantitative\"}, {\"encoding\": \"y\", \"field\": \"race_display\", \"type\": \"nominal\"}, {\"encoding\": \"x\", \"field\": \"gender\", \"type\": \"nominal\"}]}, {\"mark\": \"text\", \"mapping\": [{\"encoding\": \"text\", \"field\": \"cnt\", \"type\": \"quantitative\"}, {\"encoding\": \"y\", \"field\": \"race_display\", \"type\": \"nominal\"}, {\"encoding\": \"x\", \"field\": \"gender\", \"type\": \"nominal\"}, {\"encoding\": \"color\", \"field\": \"udi_internal_text_color_threshold\", \"type\": \"nominal\", \"domain\": [\"large\", \"small\"], \"range\": [\"white\", \"black\"], \"omitLegend\": true}]}]}",
+    "creation_method": "template",
+    "chart_type": "heatmap",
+    "chart_complexity": "complex",
+    "spec_key_count": 33,
+    "task_types": [
+      "Cluster",
+      "Compute_Derived_Value",
+      "Correlate"
+    ],
+    "description": "Shows the pre-aggregated encounter count for each combination of gender and race as a labeled heatmap.",
+    "design_considerations": "Filters to the two-dimension marginal and maps the measure to cell color; overlaid text shows exact values with contrast-aware color. The field with more categories is preferably on the y-axis.",
+    "tasks": "Identify clusters or patterns across two dimensions; compare counts across combinations."
+  },
+  {
+    "query_templates": [
+      "How many encounters are there by race and ethnicity?",
+      "Make a stacked bar chart of race and ethnicity."
+    ],
+    "spec_template": "{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"filter\": \"d['period_start_month'] == null && d['class_display'] == null && d['age_at_visit'] == null && d['gender'] == null && d['race_display'] != null && d['ethnicity_display'] != null\"}], \"representation\": {\"mark\": \"bar\", \"mapping\": [{\"encoding\": \"x\", \"field\": \"race_display\", \"type\": \"nominal\"}, {\"encoding\": \"y\", \"field\": \"cnt\", \"type\": \"quantitative\"}, {\"encoding\": \"color\", \"field\": \"ethnicity_display\", \"type\": \"nominal\"}]}}",
+    "creation_method": "template",
+    "chart_type": "stacked_bar",
+    "chart_complexity": "medium",
+    "spec_key_count": 13,
+    "task_types": [
+      "Compute_Derived_Value"
+    ],
+    "description": "Shows the pre-aggregated encounter count by race and ethnicity as a vertical stacked bar chart.",
+    "design_considerations": "Filters to the two-dimension marginal (race_display and ethnicity_display present, all other dimensions empty) and maps the measure directly. Color encodes the sub-group; prefer the field with fewer categories for color.",
+    "tasks": "Compare group compositions across categories; identify dominant sub-groups."
+  },
+  {
+    "query_templates": [
+      "What is the encounter count of ethnicity for each race?"
+    ],
+    "spec_template": "{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"filter\": \"d['period_start_month'] == null && d['class_display'] == null && d['age_at_visit'] == null && d['gender'] == null && d['race_display'] != null && d['ethnicity_display'] != null\"}], \"representation\": {\"mark\": \"bar\", \"mapping\": [{\"encoding\": \"x\", \"field\": \"race_display\", \"type\": \"nominal\"}, {\"encoding\": \"y\", \"field\": \"cnt\", \"type\": \"quantitative\"}, {\"encoding\": \"xOffset\", \"field\": \"ethnicity_display\", \"type\": \"nominal\"}, {\"encoding\": \"color\", \"field\": \"ethnicity_display\", \"type\": \"nominal\"}]}}",
+    "creation_method": "template",
+    "chart_type": "stacked_bar",
+    "chart_complexity": "medium",
+    "spec_key_count": 16,
+    "task_types": [
+      "Compute_Derived_Value"
+    ],
+    "description": "Shows the pre-aggregated encounter count by race and ethnicity as a grouped (side-by-side) bar chart.",
+    "design_considerations": "Filters to the two-dimension marginal and uses xOffset for side-by-side grouping, enabling direct comparison of ethnicity within each race.",
+    "tasks": "Directly compare sub-group counts within and across categories."
+  },
+  {
+    "query_templates": [
+      "What is the proportion of ethnicity for each race?"
+    ],
+    "spec_template": "{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"filter\": \"d['period_start_month'] == null && d['class_display'] == null && d['age_at_visit'] == null && d['gender'] == null && d['race_display'] != null && d['ethnicity_display'] != null\"}, {\"groupby\": \"race_display\", \"out\": \"groupTotals\"}, {\"rollup\": {\"axis_total\": {\"op\": \"sum\", \"field\": \"cnt\"}}}, {\"groupby\": [\"ethnicity_display\", \"race_display\"], \"in\": \"<E>\"}, {\"rollup\": {\"cell_total\": {\"op\": \"sum\", \"field\": \"cnt\"}}}, {\"join\": {\"on\": \"race_display\"}, \"in\": [\"<E>\", \"groupTotals\"], \"out\": \"datasets\"}, {\"derive\": {\"proportion\": \"d['cell_total'] / d['axis_total']\"}}], \"representation\": {\"mark\": \"bar\", \"mapping\": [{\"encoding\": \"x\", \"field\": \"race_display\", \"type\": \"nominal\"}, {\"encoding\": \"y\", \"field\": \"proportion\", \"type\": \"quantitative\"}, {\"encoding\": \"color\", \"field\": \"ethnicity_display\", \"type\": \"nominal\"}]}}",
+    "creation_method": "template",
+    "chart_type": "stacked_bar",
+    "chart_complexity": "complex",
+    "spec_key_count": 27,
+    "task_types": [
+      "Compute_Derived_Value"
+    ],
+    "description": "Shows the relative proportion of ethnicity within each race as a normalized stacked bar chart.",
+    "design_considerations": "First filters to the two-dimension marginal, then sums the measure per race and divides each cell by its group total to obtain proportions. Color is preferably the field with fewer categories.",
+    "tasks": "Compare relative proportions across categories; identify dominant sub-groups."
+  },
+  {
+    "query_templates": [
+      "Are there clusters in encounter count across race and ethnicity?",
+      "Make a heatmap of race and ethnicity."
+    ],
+    "spec_template": "{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"filter\": \"d['period_start_month'] == null && d['class_display'] == null && d['age_at_visit'] == null && d['gender'] == null && d['race_display'] != null && d['ethnicity_display'] != null\"}, {\"derive\": {\"udi_internal_percentile\": \"d['cnt'] / max(d['cnt'])\"}}, {\"derive\": {\"udi_internal_text_color_threshold\": \"d.udi_internal_percentile > .5 ? 'large' : 'small'\"}}], \"representation\": [{\"mark\": \"rect\", \"mapping\": [{\"encoding\": \"color\", \"field\": \"cnt\", \"type\": \"quantitative\"}, {\"encoding\": \"y\", \"field\": \"ethnicity_display\", \"type\": \"nominal\"}, {\"encoding\": \"x\", \"field\": \"race_display\", \"type\": \"nominal\"}]}, {\"mark\": \"text\", \"mapping\": [{\"encoding\": \"text\", \"field\": \"cnt\", \"type\": \"quantitative\"}, {\"encoding\": \"y\", \"field\": \"ethnicity_display\", \"type\": \"nominal\"}, {\"encoding\": \"x\", \"field\": \"race_display\", \"type\": \"nominal\"}, {\"encoding\": \"color\", \"field\": \"udi_internal_text_color_threshold\", \"type\": \"nominal\", \"domain\": [\"large\", \"small\"], \"range\": [\"white\", \"black\"], \"omitLegend\": true}]}]}",
+    "creation_method": "template",
+    "chart_type": "heatmap",
+    "chart_complexity": "complex",
+    "spec_key_count": 33,
+    "task_types": [
+      "Cluster",
+      "Compute_Derived_Value",
+      "Correlate"
+    ],
+    "description": "Shows the pre-aggregated encounter count for each combination of race and ethnicity as a labeled heatmap.",
+    "design_considerations": "Filters to the two-dimension marginal and maps the measure to cell color; overlaid text shows exact values with contrast-aware color. The field with more categories is preferably on the y-axis.",
+    "tasks": "Identify clusters or patterns across two dimensions; compare counts across combinations."
+  },
+  {
+    "query_templates": [
+      "How many encounters are there in total?",
+      "What is the total encounter count?"
+    ],
+    "spec_template": "{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"filter\": \"d['period_start_month'] == null && d['class_display'] == null && d['age_at_visit'] == null && d['gender'] == null && d['race_display'] == null && d['ethnicity_display'] == null\"}], \"representation\": {\"mark\": \"row\", \"mapping\": [{\"encoding\": \"text\", \"field\": \"cnt\", \"mark\": \"text\", \"type\": \"nominal\"}]}}",
+    "creation_method": "template",
+    "chart_type": "table",
+    "chart_complexity": "simple",
+    "spec_key_count": 8,
+    "task_types": [
+      "Retrieve_Value",
+      "Compute_Derived_Value"
+    ],
+    "description": "Shows the grand-total encounter count as a single-row table.",
+    "design_considerations": "Reads the grand-total row directly by filtering to the marginal where every dimension is empty; no aggregation is performed.",
+    "tasks": "Retrieve the overall total."
+  },
+  {
+    "query_templates": [
+      "List the encounter count for each encounter class.",
+      "What is the range of encounter class values?"
+    ],
+    "spec_template": "{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"filter\": \"d['period_start_month'] == null && d['class_display'] != null && d['age_at_visit'] == null && d['gender'] == null && d['race_display'] == null && d['ethnicity_display'] == null\"}, {\"orderby\": {\"field\": \"cnt\", \"order\": \"desc\"}}], \"representation\": {\"mark\": \"row\", \"mapping\": [{\"encoding\": \"text\", \"field\": \"class_display\", \"mark\": \"text\", \"type\": \"nominal\"}, {\"encoding\": \"x\", \"field\": \"cnt\", \"mark\": \"bar\", \"type\": \"quantitative\", \"range\": {\"min\": 0.1, \"max\": 1}}]}}",
+    "creation_method": "template",
+    "chart_type": "table",
+    "chart_complexity": "medium",
+    "spec_key_count": 16,
+    "task_types": [
+      "Determine_Range",
+      "Sort",
+      "Retrieve_Value"
+    ],
+    "description": "Lists each encounter class with its pre-aggregated encounter count as a sorted table with in-cell bars.",
+    "design_considerations": "Filters to the encounter class marginal, orders by the measure, and adds in-cell bars for visual comparison.",
+    "tasks": "Determine the distinct values of a dimension; compare category counts."
+  },
+  {
+    "query_templates": [
+      "List the encounter count for each gender.",
+      "What is the range of gender values?"
+    ],
+    "spec_template": "{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"filter\": \"d['period_start_month'] == null && d['class_display'] == null && d['age_at_visit'] == null && d['gender'] != null && d['race_display'] == null && d['ethnicity_display'] == null\"}, {\"orderby\": {\"field\": \"cnt\", \"order\": \"desc\"}}], \"representation\": {\"mark\": \"row\", \"mapping\": [{\"encoding\": \"text\", \"field\": \"gender\", \"mark\": \"text\", \"type\": \"nominal\"}, {\"encoding\": \"x\", \"field\": \"cnt\", \"mark\": \"bar\", \"type\": \"quantitative\", \"range\": {\"min\": 0.1, \"max\": 1}}]}}",
+    "creation_method": "template",
+    "chart_type": "table",
+    "chart_complexity": "medium",
+    "spec_key_count": 16,
+    "task_types": [
+      "Determine_Range",
+      "Sort",
+      "Retrieve_Value"
+    ],
+    "description": "Lists each gender with its pre-aggregated encounter count as a sorted table with in-cell bars.",
+    "design_considerations": "Filters to the gender marginal, orders by the measure, and adds in-cell bars for visual comparison.",
+    "tasks": "Determine the distinct values of a dimension; compare category counts."
+  },
+  {
+    "query_templates": [
+      "List the encounter count for each race.",
+      "What is the range of race values?"
+    ],
+    "spec_template": "{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"filter\": \"d['period_start_month'] == null && d['class_display'] == null && d['age_at_visit'] == null && d['gender'] == null && d['race_display'] != null && d['ethnicity_display'] == null\"}, {\"orderby\": {\"field\": \"cnt\", \"order\": \"desc\"}}], \"representation\": {\"mark\": \"row\", \"mapping\": [{\"encoding\": \"text\", \"field\": \"race_display\", \"mark\": \"text\", \"type\": \"nominal\"}, {\"encoding\": \"x\", \"field\": \"cnt\", \"mark\": \"bar\", \"type\": \"quantitative\", \"range\": {\"min\": 0.1, \"max\": 1}}]}}",
+    "creation_method": "template",
+    "chart_type": "table",
+    "chart_complexity": "medium",
+    "spec_key_count": 16,
+    "task_types": [
+      "Determine_Range",
+      "Sort",
+      "Retrieve_Value"
+    ],
+    "description": "Lists each race with its pre-aggregated encounter count as a sorted table with in-cell bars.",
+    "design_considerations": "Filters to the race marginal, orders by the measure, and adds in-cell bars for visual comparison.",
+    "tasks": "Determine the distinct values of a dimension; compare category counts."
+  },
+  {
+    "query_templates": [
+      "List the encounter count for each ethnicity.",
+      "What is the range of ethnicity values?"
+    ],
+    "spec_template": "{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"filter\": \"d['period_start_month'] == null && d['class_display'] == null && d['age_at_visit'] == null && d['gender'] == null && d['race_display'] == null && d['ethnicity_display'] != null\"}, {\"orderby\": {\"field\": \"cnt\", \"order\": \"desc\"}}], \"representation\": {\"mark\": \"row\", \"mapping\": [{\"encoding\": \"text\", \"field\": \"ethnicity_display\", \"mark\": \"text\", \"type\": \"nominal\"}, {\"encoding\": \"x\", \"field\": \"cnt\", \"mark\": \"bar\", \"type\": \"quantitative\", \"range\": {\"min\": 0.1, \"max\": 1}}]}}",
+    "creation_method": "template",
+    "chart_type": "table",
+    "chart_complexity": "medium",
+    "spec_key_count": 16,
+    "task_types": [
+      "Determine_Range",
+      "Sort",
+      "Retrieve_Value"
+    ],
+    "description": "Lists each ethnicity with its pre-aggregated encounter count as a sorted table with in-cell bars.",
+    "design_considerations": "Filters to the ethnicity marginal, orders by the measure, and adds in-cell bars for visual comparison.",
+    "tasks": "Determine the distinct values of a dimension; compare category counts."
+  }
+]
