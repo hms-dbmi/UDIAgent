@@ -1,3 +1,9 @@
+> [!warning]
+> ## 🚚 This repository has moved!
+> Development now happens in **[udi-yac](https://github.com/hms-dbmi/udi-yac)** — specifically under [`packages/agent`](https://github.com/hms-dbmi/udi-yac/tree/main/packages/agent).
+>
+> This repo is archived and no longer maintained. Please open issues and PRs in the new location.
+
 # UDIAgent
 
 LLM-powered data visualization orchestration library for the Universal Discovery Interface (UDI).
