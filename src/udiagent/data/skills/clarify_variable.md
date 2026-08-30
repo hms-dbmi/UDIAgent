@@ -23,7 +23,7 @@ The user's request references one or more ambiguous variables that could match m
 
 Respond with a JSON object containing exactly two keys:
 
-1. **"message"**: A polite, natural-language explanation of what is ambiguous and why clarification is needed. Be specific about which terms are ambiguous and what the possible interpretations are.
+1. **"message"**: A polite, natural-language explanation of what is ambiguous and why clarification is needed. Be specific about which terms are ambiguous and what the possible interpretations are. **Respond in a single sentence.**
 2. **"ambiguous_variables"**: An array of objects, one per ambiguous term. Each object must have:
    - `"query_term"`: The term from the user's request that is ambiguous
    - `"candidates"`: An array of candidate matches, each with only:

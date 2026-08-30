@@ -299,12 +299,6 @@ class Orchestrator:
         usage,
         openai_api_key=None,
     ):
-        available_capabilities = [
-            f"{t['function']['name']}: {t['function']['description']}"
-            for t in self.tools
-            if t["function"]["name"] != "Rebuff"
-        ]
-
         rebuff_skill = self.skills.get("rebuff")
         if rebuff_skill:
             rendered = render_template(
@@ -312,9 +306,6 @@ class Orchestrator:
                 {
                     "user_request": tool_args.get("user_request", ""),
                     "reason": tool_args.get("reason", ""),
-                    "available_tools": "\n".join(
-                        f"- {cap}" for cap in available_capabilities
-                    ),
                 },
             )
             gpt_client = self.agent._get_gpt_client(openai_api_key)
@@ -334,12 +325,10 @@ class Orchestrator:
             except (json.JSONDecodeError, IndexError):
                 response_data = {
                     "message": f"Sorry, I cannot fulfill this request. {tool_args.get('reason', '')}",
-                    "suggestions": [],
                 }
         else:
             response_data = {
                 "message": f"Sorry, I cannot fulfill this request. {tool_args.get('reason', '')}",
-                "suggestions": [],
             }
 
         return {
