@@ -153,4 +153,7 @@ data_collection/old*
 data_collection/data_untill_1112
 data_collection/data_tmp
 
+# Raw data-cube fixtures are kept locally, not committed
+data/example_data_cube/
+
 .DS_Store
